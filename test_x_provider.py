@@ -1,36 +1,50 @@
 import sys
 
-sys.path.append("src")
+sys.path.append(
+    "src"
+)
 
 from providers.x_provider import XProvider
 
 
 def main():
 
+    print(
+        "Avvio test XProvider"
+    )
+
     provider = XProvider()
 
-    test_tweets = [
+    news = provider.fetch()
 
-        "🚨 BREAKING: Palermo are in talks for a new signing. Agreement close.",
+    print(
+        f"\nNotizie trovate: {len(news)}"
+    )
 
-        "Exclusive: Rosanero interested in a Serie B midfielder.",
-
-        "Manchester United complete deal for player."
-
-    ]
-
-
-    for tweet in test_tweets:
-
-        print("\n====================")
-        print("TEST:")
-        print(tweet)
-
-        result = provider.is_relevant(tweet)
+    for item in news:
 
         print(
-            "PASSA FILTRO:",
-            result
+            "\n===================="
+        )
+
+        print(
+            "Titolo:",
+            item.title
+        )
+
+        print(
+            "Fonte:",
+            item.source
+        )
+
+        print(
+            "Link:",
+            item.link
+        )
+
+        print(
+            "Summary:",
+            item.summary
         )
 
 
