@@ -41,8 +41,13 @@ def main():
         summary_text = ""
 
         if item.summary:
+            short_summary = item.summary[:220]
+
+            if len(item.summary) > 220:
+                short_summary += "..."
+
             summary_text = (
-                f"📝 <i>{item.summary}</i>\n\n"
+                f"📝 <i>{short_summary}</i>\n\n"
             )
 
         message = (
