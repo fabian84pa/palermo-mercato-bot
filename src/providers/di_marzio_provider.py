@@ -1,31 +1,15 @@
 from core.news import NewsItem
+from core.provider import Provider
 
 
-PALERMO_KEYWORDS = (
-    "palermo",
-    "palermo fc",
-    "rosanero",
-    "rosaneri",
-    "inzaghi",
-)
+class DiMarzioProvider(Provider):
+    @property
+    def name(self) -> str:
+        return "Gianluca Di Marzio"
 
-EXCLUDED_KEYWORDS = (
-    "comune di palermo",
-    "aeroporto di palermo",
-    "provincia di palermo",
-    "meteo palermo",
-    "cronaca palermo",
-)
-
-
-def is_palermo_news(item: NewsItem) -> bool:
-    """
-    Restituisce True solo se la notizia riguarda il Palermo FC.
-    """
-
-    text = f"{item.title} {item.source}".casefold()
-
-    if any(keyword in text for keyword in EXCLUDED_KEYWORDS):
-        return False
-
-    return any(keyword in text for keyword in PALERMO_KEYWORDS)
+    def fetch(self) -> list[NewsItem]:
+        """
+        Provider temporaneo.
+        Nel prossimo step leggeremo davvero il feed RSS.
+        """
+        return []
