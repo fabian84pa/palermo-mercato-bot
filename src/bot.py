@@ -41,7 +41,8 @@ def main():
         )
         return
 
-    for item in new_news[:5]:
+    # Limite massimo notifiche per esecuzione
+    for item in new_news[:3]:
 
         summary_text = ""
 
@@ -59,8 +60,8 @@ def main():
             "🚨 <b>PALERMO CALCIOMERCATO</b>\n\n"
             f"📰 <b>{item.title}</b>\n\n"
             f"{summary_text}"
-            f"👤 Fonte: {item.source}\n\n"
-            f'🔗 <a href="{item.link}">Apri la notizia</a>'
+            f"📰 Fonte: <b>{item.source}</b>\n\n"
+            f'🔗 <a href="{item.link}">Leggi articolo</a>'
         )
 
         send_message(message)
