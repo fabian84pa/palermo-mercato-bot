@@ -1,60 +1,79 @@
 import re
 
 
+BLACKLIST = (
+    "palermo",
+    "palermo fc",
+    "palermo calcio",
+    "serie b",
+    "serie a",
+    "calciomercato",
+    "mercato",
+    "tuttomercatoweb",
+    "gianluca di marzio",
+)
+
+
+def clean_name(name: str) -> str:
+    """
+    Pulisce il possibile nome trovato.
+    """
+
+    name = name.strip()
+
+    if name.casefold() in BLACKLIST:
+        return ""
+
+    return name
+
+
 def extract_player(title: str) -> str:
     """
-    Estrae un possibile nome giocatore dal titolo della notizia.
+    Estrae un possibile giocatore dal titolo.
     """
 
     text = title.strip()
 
-    # Rimuove prefissi comuni
-    prefixes = (
-        "palermo,",
-        "palermo:",
-        "palermo fc,",
-        "palermo fc:",
-    )
-
-    for prefix in prefixes:
-        if text.casefold().startswith(prefix):
-            text = text[len(prefix):].strip()
-
-    # Parole che indicano la presenza di un nome dopo
     patterns = (
-        r"(?:di|per|su|per il ritorno di|arriva|preso|firma)\s+([A-ZÀ-Ý][a-zà-ÿ]+(?:\s+[A-ZÀ-Ý][a-zà-ÿ]+)+)",
-        r"([A-ZÀ-Ý][a-zà-ÿ]+(?:\s+[A-ZÀ-Ý][a-zà-ÿ]+)+)"
+
+        # dopo parole chiave
+        r"(?:di|per|su|segue|seguito da|interessa|piace|obiettivo|arriva)\s+([A-ZÀ-Ý][a-zà-ÿ]+(?:\s+[A-ZÀ-Ý][a-zà-ÿ]+)+)",
+
+        # nomi composti nel titolo
+        r"\b([A-ZÀ-Ý][a-zà-ÿ]{2,}\s+[A-ZÀ-Ý][a-zà-ÿ]{2,})\b",
     )
+
 
     for pattern in patterns:
 
-        match = re.search(
+        matches = re.findall(
             pattern,
             text
         )
 
-        if match:
-            candidate = match.group(1).strip()
+        for match in matches:
 
-            # Evita falsi positivi comuni
-            blacklist = (
-                "Serie B",
-                "Palermo Calcio",
-                "Tutto Mercato",
-                "Gianluca Di",
+            candidate = clean_name(
+                match
             )
 
-            if candidate not in blacklist:
+            if candidate:
                 return candidate
+
 
     return ""
 
 
 def format_player(title: str) -> str:
+    """
+    Formatta il giocatore per Telegram.
+    """
 
     player = extract_player(title)
 
     if player:
-        return f"👤 <b>Giocatore:</b> {player}"
+        return (
+            f"👤 <b>Giocatore:</b> {player}"
+        )
 
     return ""
