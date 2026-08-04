@@ -1,8 +1,6 @@
 def get_quality_score(title: str, source: str = "") -> int:
     """
     Calcola la qualità/importanza di una notizia di mercato Palermo.
-
-    Punteggio più alto = notizia più interessante.
     """
 
     text = title.casefold()
@@ -10,7 +8,7 @@ def get_quality_score(title: str, source: str = "") -> int:
 
     score = 0
 
-    # Esclusioni contenuti non di mercato
+
     excluded_keywords = (
         "biglietto",
         "biglietti",
@@ -27,36 +25,28 @@ def get_quality_score(title: str, source: str = "") -> int:
         "codice etico",
     )
 
+
     if any(
         keyword in text
         for keyword in excluded_keywords
     ):
         return 0
 
-    # Fonte ufficiale Palermo FC
-    if "palermo fc" in source_text:
 
-        score += 50
 
-        # Bonus solo se è realmente mercato
-        if any(
-            keyword in text
-            for keyword in (
-                "acquista",
-                "acquistato",
-                "ingaggia",
-                "firma",
-                "firmato",
-                "ufficiale",
-                "annuncia",
-                "annunciato",
-                "rinnovo",
-                "prolungamento",
-                "cessione",
-                "arriva",
-            )
-        ):
-            score += 50
+    # Fonti mercato affidabili
+    if any(
+        source_name in source_text
+        for source_name in (
+            "palermo fc",
+            "x calciomercato",
+            "gianluca di marzio",
+            "tuttomercatoweb",
+        )
+    ):
+        score += 30
+
+
 
     # Ufficialità
     if any(
@@ -69,9 +59,18 @@ def get_quality_score(title: str, source: str = "") -> int:
             "firmato",
             "rinnovo",
             "prolungamento",
+
+            # inglese
+            "official",
+            "confirmed",
+            "signed",
+            "signing",
+            "contract signed",
         )
     ):
         score += 70
+
+
 
     # Trattative avanzate
     if any(
@@ -83,9 +82,18 @@ def get_quality_score(title: str, source: str = "") -> int:
             "fatta",
             "chiuso",
             "arriva",
+
+            # inglese
+            "agreement",
+            "deal",
+            "done deal",
+            "medical",
+            "here we go",
         )
     ):
         score += 60
+
+
 
     # Interesse concreto
     if any(
@@ -96,9 +104,22 @@ def get_quality_score(title: str, source: str = "") -> int:
             "contatti",
             "offerta",
             "vicino",
+
+            # inglese
+            "target",
+            "talks",
+            "in talks",
+            "interest",
+            "interested",
+            "proposal",
+            "bid",
+            "offer",
+            "close",
         )
     ):
         score += 40
+
+
 
     # Rumor deboli
     if any(
@@ -109,8 +130,14 @@ def get_quality_score(title: str, source: str = "") -> int:
             "sondaggio",
             "idea",
             "valuta",
+
+            # inglese
+            "likes",
+            "monitoring",
+            "follows",
         )
     ):
         score += 15
+
 
     return score
