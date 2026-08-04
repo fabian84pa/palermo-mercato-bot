@@ -15,3 +15,4 @@ class NewsItem:
     link: str
     source: str
     published: str
+    summary: str = ""
