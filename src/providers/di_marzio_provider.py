@@ -32,6 +32,34 @@ class DiMarzioProvider(Provider):
     def name(self) -> str:
         return "Gianluca Di Marzio"
 
+    def get_summary(self, link: str) -> str:
+        try:
+            response = requests.get(
+                link,
+                headers=self.HEADERS,
+                timeout=15,
+            )
+
+            response.raise_for_status()
+
+            soup = BeautifulSoup(
+                response.text,
+                "html.parser"
+            )
+
+            description = soup.find(
+                "meta",
+                attrs={"name": "description"}
+            )
+
+            if description and description.get("content"):
+                return description["content"].strip()
+
+        except Exception:
+            pass
+
+        return ""
+
     def fetch(self) -> list[NewsItem]:
 
         response = requests.get(
@@ -90,7 +118,7 @@ class DiMarzioProvider(Provider):
                     link=link,
                     source=self.name,
                     published="",
-                    summary="",
+                    summary=self.get_summary(link),
                 )
             )
 
