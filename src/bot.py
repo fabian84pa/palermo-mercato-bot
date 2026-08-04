@@ -35,7 +35,7 @@ def main():
 
     print(f"Notizie trovate: {len(news)}")
 
-    # Debug qualità di tutte le notizie trovate
+    # Debug qualità
     for item in news:
         score = get_quality_score(
             item.title,
@@ -53,11 +53,9 @@ def main():
 
     print(f"Nuove notizie: {len(new_news)}")
 
+    # Nessuna notizia nuova:
+    # non inviare nulla su Telegram
     if not new_news:
-        send_message(
-            "ℹ️ <b>Palermo Mercato Bot</b>\n\n"
-            "Nessuna nuova notizia."
-        )
         return
 
     quality_news = []
@@ -86,14 +84,10 @@ def main():
         f"Notizie valide dopo filtro qualità: {len(quality_news)}"
     )
 
+    # Nessuna notizia abbastanza importante:
+    # non inviare nulla
     if not quality_news:
         save_seen_items(seen_items)
-
-        send_message(
-            "ℹ️ <b>Palermo Mercato Bot</b>\n\n"
-            "Nessuna notizia rilevante."
-        )
-
         return
 
     quality_news.sort(
