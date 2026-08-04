@@ -29,32 +29,20 @@ class XProvider(Provider):
 
     def load_keywords(self):
 
-        try:
+        with open(
+            self.KEYWORDS_FILE,
+            "r",
+            encoding="utf-8"
+        ) as file:
 
-            with open(
-                self.KEYWORDS_FILE,
-                "r",
-                encoding="utf-8"
-            ) as file:
+            data = json.load(file)
 
-                data = json.load(file)
-
-            return tuple(
-                data.get(
-                    "keywords",
-                    []
-                )
-            )
-
-        except Exception:
-
-            return ()
+        return tuple(
+            data.get("keywords", [])
+        )
 
 
-    def clean_text(
-        self,
-        text: str
-    ) -> str:
+    def clean_text(self, text):
 
         lines = []
 
@@ -73,34 +61,31 @@ class XProvider(Provider):
 
             lines.append(line)
 
-
         return " ".join(lines)
 
 
-    def is_relevant(
-        self,
-        text: str
-    ) -> bool:
+    def is_relevant(self, text):
 
         keywords = self.load_keywords()
 
         normalized = text.casefold()
 
-        return any(
-            keyword.casefold()
-            in normalized
-            for keyword in keywords
-        )
+        for keyword in keywords:
+
+            if keyword.casefold() in normalized:
+
+                print(
+                    f"Keyword trovata: {keyword}"
+                )
+
+                return True
+
+        return False
 
 
     def fetch(self) -> list[NewsItem]:
 
-        items: list[NewsItem] = []
-
-        keywords = self.load_keywords()
-
-        if not keywords:
-            return items
+        items = []
 
 
         with sync_playwright() as p:
@@ -115,8 +100,13 @@ class XProvider(Provider):
             for source in self.SOURCES:
 
                 print(
-                    f"Controllo X: @{source}"
+                    "\n===================="
                 )
+
+                print(
+                    f"CONTROLLO X: @{source}"
+                )
+
 
                 try:
 
@@ -133,7 +123,7 @@ class XProvider(Provider):
 
 
                     page.wait_for_timeout(
-                        5000
+                        8000
                     )
 
 
@@ -145,12 +135,25 @@ class XProvider(Provider):
                     count = tweets.count()
 
 
+                    print(
+                        f"Tweet trovati: {count}"
+                    )
+
+
                     for i in range(
-                        min(count, 5)
+                        min(count,5)
                     ):
 
-
                         raw = tweets.nth(i).inner_text()
+
+
+                        print(
+                            "\n--- RAW TWEET ---"
+                        )
+
+                        print(
+                            raw[:300]
+                        )
 
 
                         text = self.clean_text(
@@ -158,13 +161,23 @@ class XProvider(Provider):
                         )
 
 
-                        if not text:
-                            continue
+                        print(
+                            "\n--- PULITO ---"
+                        )
+
+                        print(
+                            text[:300]
+                        )
 
 
                         if not self.is_relevant(
                             text
                         ):
+
+                            print(
+                                "Scartato"
+                            )
+
                             continue
 
 
@@ -183,12 +196,9 @@ class XProvider(Provider):
 
                                 source=self.name,
 
-                                published=(
-                                    datetime.now()
-                                    .isoformat()
-                                ),
+                                published=datetime.now().isoformat(),
 
-                                summary=text,
+                                summary=text
 
                             )
 
@@ -198,7 +208,7 @@ class XProvider(Provider):
                 except Exception as e:
 
                     print(
-                        f"Errore X @{source}: {e}"
+                        f"Errore @{source}: {e}"
                     )
 
 
