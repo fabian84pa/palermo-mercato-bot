@@ -1,6 +1,7 @@
 from core.engine import Engine
 from core.classifier import classify_news
 from core.priority import get_priority
+from core.quality import get_quality_score
 
 from providers.di_marzio_provider import DiMarzioProvider
 from providers.tmw_provider import TMWProvider
@@ -14,6 +15,9 @@ from database import (
     is_seen,
     mark_as_seen,
 )
+
+
+MIN_QUALITY_SCORE = 30
 
 
 def main():
@@ -45,15 +49,52 @@ def main():
         )
         return
 
+    # Filtro qualità
+    quality_news = []
+
+    for item in new_news:
+
+        score = get_quality_score(
+            item.title,
+            item.source
+        )
+
+        print(
+            f"Qualità {score}: {item.title}"
+        )
+
+        if score >= MIN_QUALITY_SCORE:
+            quality_news.append(item)
+
+        else:
+            mark_as_seen(
+                item.id,
+                seen_items
+            )
+
+    print(
+        f"Notizie valide dopo filtro qualità: {len(quality_news)}"
+    )
+
+    if not quality_news:
+        save_seen_items(seen_items)
+
+        send_message(
+            "ℹ️ <b>Palermo Mercato Bot</b>\n\n"
+            "Nessuna notizia rilevante."
+        )
+
+        return
+
     # Ordina per importanza
-    new_news.sort(
+    quality_news.sort(
         key=lambda item: get_priority(
             item.title,
             item.source
         )
     )
 
-    for item in new_news[:3]:
+    for item in quality_news[:3]:
 
         category = classify_news(
             item.title,
@@ -63,6 +104,7 @@ def main():
         summary_text = ""
 
         if item.summary:
+
             short_summary = item.summary[:220]
 
             if len(item.summary) > 220:
@@ -83,7 +125,10 @@ def main():
 
         send_message(message)
 
-        mark_as_seen(item.id, seen_items)
+        mark_as_seen(
+            item.id,
+            seen_items
+        )
 
     save_seen_items(seen_items)
 
