@@ -1,0 +1,36 @@
+name: Test X Full Parser
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-x-full:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Scarica repository
+        uses: actions/checkout@v4
+
+
+      - name: Configura Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+
+      - name: Aggiorna pip
+        run: |
+          python -m pip install --upgrade pip
+
+
+      - name: Installa dipendenze
+        run: |
+          pip install playwright
+          playwright install chromium
+
+
+      - name: Test X Full
+        run: |
+          python test_x_full.py
