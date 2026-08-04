@@ -9,6 +9,15 @@ ACCOUNTS = [
 ]
 
 
+KEYWORDS = (
+    "palermo",
+    "palermo fc",
+    "rosanero",
+    "rosaneri",
+    "inzaghi",
+)
+
+
 def main():
 
     with sync_playwright() as p:
@@ -27,32 +36,69 @@ def main():
             print(f"ACCOUNT: @{account}")
             print("====================")
 
-            page.goto(
-                url,
-                wait_until="domcontentloaded",
-                timeout=60000
-            )
+            try:
 
-            page.wait_for_timeout(5000)
+                page.goto(
+                    url,
+                    wait_until="domcontentloaded",
+                    timeout=60000
+                )
 
-            tweets = page.locator(
-                "article"
-            )
+                page.wait_for_timeout(
+                    5000
+                )
 
-            count = tweets.count()
+                tweets = page.locator(
+                    "article"
+                )
 
-            print(
-                f"Tweet trovati: {count}"
-            )
+                count = tweets.count()
 
-            for i in range(
-                min(count, 3)
-            ):
+                print(
+                    f"Tweet trovati: {count}"
+                )
 
-                text = tweets.nth(i).inner_text()
 
-                print("\n--- TWEET ---")
-                print(text[:400])
+                for i in range(
+                    min(count, 5)
+                ):
+
+                    text = tweets.nth(i).inner_text()
+
+                    normalized = text.casefold()
+
+
+                    if any(
+                        keyword in normalized
+                        for keyword in KEYWORDS
+                    ):
+
+                        print(
+                            "\n🚨 TWEET PALERMO TROVATO"
+                        )
+
+                        print(
+                            text[:500]
+                        )
+
+                    else:
+
+                        print(
+                            "\nIgnorato:"
+                        )
+
+                        print(
+                            text[:150]
+                        )
+
+
+            except Exception as e:
+
+                print(
+                    "Errore:",
+                    e
+                )
+
 
         browser.close()
 
