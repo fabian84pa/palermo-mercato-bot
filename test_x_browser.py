@@ -1,12 +1,15 @@
 from playwright.sync_api import sync_playwright
 
 
-ACCOUNT = "FabrizioRomano"
+ACCOUNTS = [
+    "FabrizioRomano",
+    "NicoSchira",
+    "DiMarzio",
+    "MatteMoretto",
+]
 
 
 def main():
-
-    url = f"https://x.com/{ACCOUNT}"
 
     with sync_playwright() as p:
 
@@ -16,43 +19,40 @@ def main():
 
         page = browser.new_page()
 
-        print(f"Apro: {url}")
+        for account in ACCOUNTS:
 
-        page.goto(
-            url,
-            wait_until="domcontentloaded",
-            timeout=60000
-        )
+            url = f"https://x.com/{account}"
 
-        page.wait_for_timeout(5000)
+            print("\n====================")
+            print(f"ACCOUNT: @{account}")
+            print("====================")
 
-        tweets = page.locator(
-            'article'
-        )
+            page.goto(
+                url,
+                wait_until="domcontentloaded",
+                timeout=60000
+            )
 
-        count = tweets.count()
+            page.wait_for_timeout(5000)
 
-        print(
-            f"Tweet trovati: {count}"
-        )
+            tweets = page.locator(
+                "article"
+            )
 
-        for i in range(
-            min(count, 5)
-        ):
+            count = tweets.count()
 
-            try:
+            print(
+                f"Tweet trovati: {count}"
+            )
+
+            for i in range(
+                min(count, 3)
+            ):
 
                 text = tweets.nth(i).inner_text()
 
                 print("\n--- TWEET ---")
-                print(text[:500])
-
-            except Exception as e:
-
-                print(
-                    "Errore:",
-                    e
-                )
+                print(text[:400])
 
         browser.close()
 
