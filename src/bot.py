@@ -2,6 +2,7 @@ from core.engine import Engine
 from core.classifier import classify_news
 from core.priority import get_priority
 from core.quality import get_quality_score
+from core.entity import format_player
 
 from providers.di_marzio_provider import DiMarzioProvider
 from providers.tmw_provider import TMWProvider
@@ -42,8 +43,6 @@ def main():
 
     print(f"Nuove notizie: {len(new_news)}")
 
-    # Nessuna nuova notizia:
-    # nessun messaggio Telegram
     if not new_news:
         return
 
@@ -69,7 +68,6 @@ def main():
         f"Notizie valide dopo filtro qualità: {len(quality_news)}"
     )
 
-    # Nessuna notizia abbastanza importante
     if not quality_news:
         save_seen_items(seen_items)
         return
@@ -88,6 +86,17 @@ def main():
             item.source
         )
 
+        player = format_player(
+            item.title
+        )
+
+        player_text = ""
+
+        if player:
+            player_text = (
+                f"{player}\n\n"
+            )
+
         summary_text = ""
 
         if item.summary:
@@ -104,6 +113,7 @@ def main():
         message = (
             "🚨 <b>PALERMO CALCIOMERCATO</b>\n\n"
             f"{category}\n\n"
+            f"{player_text}"
             f"📰 <b>{item.title}</b>\n\n"
             f"{summary_text}"
             f"📰 Fonte: <b>{item.source}</b>\n\n"
