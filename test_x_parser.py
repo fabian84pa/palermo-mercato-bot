@@ -1,19 +1,29 @@
+import json
 from datetime import datetime
+from pathlib import Path
 
 
-KEYWORDS = (
-    "palermo",
-    "palermo fc",
-    "rosanero",
-    "rosaneri",
-    "inzaghi",
+KEYWORDS_FILE = Path(
+    "data/palermo_keywords.json"
 )
 
 
+def load_keywords():
+
+    with open(
+        KEYWORDS_FILE,
+        "r",
+        encoding="utf-8"
+    ) as file:
+
+        data = json.load(file)
+
+    return tuple(
+        data.get("keywords", [])
+    )
+
+
 def clean_tweet(text: str) -> str:
-    """
-    Pulisce il testo del tweet.
-    """
 
     lines = text.splitlines()
 
@@ -26,28 +36,30 @@ def clean_tweet(text: str) -> str:
         if not line:
             continue
 
-        if line.startswith("@"):
+        if line.lower() == "pinned":
             continue
 
-        if line.lower() == "pinned":
+        if line.startswith("@"):
             continue
 
         cleaned.append(line)
 
+
     return " ".join(cleaned)
 
 
+
 def is_palermo_news(text: str) -> bool:
-    """
-    Controlla se il tweet riguarda Palermo.
-    """
+
+    keywords = load_keywords()
 
     normalized = text.casefold()
 
     return any(
-        keyword in normalized
-        for keyword in KEYWORDS
+        keyword.casefold() in normalized
+        for keyword in keywords
     )
+
 
 
 def create_news_item(
@@ -57,30 +69,39 @@ def create_news_item(
 ):
 
     return {
+
         "title": text[:120],
+
         "source": f"X - {author}",
+
         "link": link,
-        "published": datetime.now().isoformat(),
-        "summary": text,
+
+        "published":
+            datetime.now().isoformat(),
+
+        "summary": text
+
     }
+
 
 
 if __name__ == "__main__":
 
-    test_tweet = """
-    Fabrizio Romano
-    @FabrizioRomano
 
-    Palermo are pushing for Gabriel Strefezza.
-    Talks ongoing.
+    test = """
+    Fabrizio Romano
+
+    Palermo are in talks for a new signing.
     """
 
+
     cleaned = clean_tweet(
-        test_tweet
+        test
     )
 
+
     print(
-        "TESTO PULITO:"
+        "TESTO:"
     )
 
     print(
@@ -89,7 +110,7 @@ if __name__ == "__main__":
 
 
     print(
-        "\nPalermo news:"
+        "\nPALERMO:"
     )
 
     print(
@@ -99,17 +120,14 @@ if __name__ == "__main__":
     )
 
 
-    item = create_news_item(
-        "Fabrizio Romano",
-        cleaned,
-        "https://x.com/test"
-    )
-
-
     print(
         "\nNEWS ITEM:"
     )
 
     print(
-        item
+        create_news_item(
+            "Fabrizio Romano",
+            cleaned,
+            "https://x.com/test"
+        )
     )
