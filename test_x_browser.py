@@ -14,16 +14,9 @@ def main():
             headless=True
         )
 
-        page = browser.new_page(
-            viewport={
-                "width": 1280,
-                "height": 2000
-            }
-        )
+        page = browser.new_page()
 
-        print(
-            f"Apro: {url}"
-        )
+        print(f"Apro: {url}")
 
         page.goto(
             url,
@@ -31,17 +24,35 @@ def main():
             timeout=60000
         )
 
-        page.wait_for_timeout(
-            5000
+        page.wait_for_timeout(5000)
+
+        tweets = page.locator(
+            'article'
         )
 
-        text = page.locator(
-            "body"
-        ).inner_text()
+        count = tweets.count()
 
         print(
-            text[:3000]
+            f"Tweet trovati: {count}"
         )
+
+        for i in range(
+            min(count, 5)
+        ):
+
+            try:
+
+                text = tweets.nth(i).inner_text()
+
+                print("\n--- TWEET ---")
+                print(text[:500])
+
+            except Exception as e:
+
+                print(
+                    "Errore:",
+                    e
+                )
 
         browser.close()
 
