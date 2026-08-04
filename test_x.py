@@ -1,4 +1,4 @@
-import requests
+import snscrape.modules.twitter as sntwitter
 
 
 ACCOUNTS = [
@@ -9,62 +9,39 @@ ACCOUNTS = [
 ]
 
 
-SOURCES = [
-    "https://nitter.nerdvpn.de/",
-    "https://nitter.privacydev.net/",
-]
+for account in ACCOUNTS:
 
-
-def test_source(base_url, account):
-
-    url = f"{base_url}{account}"
-
-    print(
-        f"\nTest: {url}"
-    )
+    print("\n====================")
+    print(f"Test account: @{account}")
+    print("====================")
 
     try:
-        response = requests.get(
-            url,
-            timeout=15,
-            headers={
-                "User-Agent": (
-                    "Mozilla/5.0"
-                )
-            }
+
+        scraper = sntwitter.TwitterUserScraper(
+            account
         )
 
-        print(
-            "Status:",
-            response.status_code
-        )
+        count = 0
 
-        if response.status_code == 200:
-
-            text = response.text[:200]
+        for tweet in scraper.get_items():
 
             print(
-                "OK:",
-                text.replace("\n", " ")
+                tweet.date,
+                "|",
+                tweet.rawContent[:150]
             )
 
-            return True
+            count += 1
+
+            if count >= 3:
+                break
+
+        if count == 0:
+            print("Nessun tweet trovato")
 
     except Exception as e:
 
         print(
             "Errore:",
             e
-        )
-
-    return False
-
-
-for source in SOURCES:
-
-    for account in ACCOUNTS:
-
-        test_source(
-            source,
-            account
         )
