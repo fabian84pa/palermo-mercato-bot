@@ -25,6 +25,9 @@ MIN_QUALITY_SCORE = 30
 
 def main():
 
+    print("🚀 Avvio automatico Palermo Mercato Bot")
+
+
     providers = [
         DiMarzioProvider(),
         TMWProvider(),
@@ -82,6 +85,8 @@ def main():
 
     if not new_news:
 
+        print("Nessuna nuova notizia")
+
         return
 
 
@@ -95,6 +100,13 @@ def main():
         score = get_quality_score(
             item.title,
             item.source
+        )
+
+
+        print(
+            f"DEBUG QUALITÀ: {item.title} | "
+            f"Fonte: {item.source} | "
+            f"Score: {score}"
         )
 
 
@@ -117,6 +129,7 @@ def main():
     )
 
 
+
     if not quality_news:
 
         save_seen_items(
@@ -127,13 +140,16 @@ def main():
 
 
 
+    # Ordina dalle notizie più importanti
     quality_news.sort(
 
         key=lambda item:
         get_priority(
             item.title,
             item.source
-        )
+        ),
+
+        reverse=True
 
     )
 
@@ -245,6 +261,11 @@ def main():
 
 
 
+        print(
+            f"Invio Telegram: {item.title}"
+        )
+
+
         send_message(
             message
         )
@@ -261,6 +282,9 @@ def main():
     save_seen_items(
         seen_items
     )
+
+
+    print("✅ Ciclo completato")
 
 
 
