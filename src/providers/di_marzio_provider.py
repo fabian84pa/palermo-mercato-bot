@@ -8,6 +8,7 @@ from core.provider import Provider
 
 
 class DiMarzioProvider(Provider):
+
     BASE_URL = "https://www.gianlucadimarzio.com"
     NEWS_URL = "https://www.gianlucadimarzio.com/calciomercato/"
 
@@ -32,20 +33,30 @@ class DiMarzioProvider(Provider):
         return "Gianluca Di Marzio"
 
     def fetch(self) -> list[NewsItem]:
+
         response = requests.get(
             self.NEWS_URL,
             headers=self.HEADERS,
             timeout=30,
         )
+
         response.raise_for_status()
 
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = BeautifulSoup(
+            response.text,
+            "html.parser"
+        )
 
         items: list[NewsItem] = []
         seen_links: set[str] = set()
 
         for anchor in soup.find_all("a", href=True):
-            title = anchor.get_text(" ", strip=True)
+
+            title = anchor.get_text(
+                " ",
+                strip=True
+            )
+
             href = anchor["href"].strip()
 
             if not title or len(title) < 15:
@@ -53,10 +64,16 @@ class DiMarzioProvider(Provider):
 
             normalized_title = title.casefold()
 
-            if not any(keyword in normalized_title for keyword in self.KEYWORDS):
+            if not any(
+                keyword in normalized_title
+                for keyword in self.KEYWORDS
+            ):
                 continue
 
-            link = urljoin(self.BASE_URL, href)
+            link = urljoin(
+                self.BASE_URL,
+                href
+            )
 
             if "gianlucadimarzio.com/calciomercato/" not in link:
                 continue
@@ -73,6 +90,7 @@ class DiMarzioProvider(Provider):
                     link=link,
                     source=self.name,
                     published="",
+                    summary="",
                 )
             )
 
