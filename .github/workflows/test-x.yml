@@ -1,0 +1,26 @@
+name: Test X Provider
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-x:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Scarica repository
+        uses: actions/checkout@v4
+
+      - name: Configura Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installa dipendenze
+        run: |
+          pip install requests
+
+      - name: Test X
+        run: |
+          python test_x.py
