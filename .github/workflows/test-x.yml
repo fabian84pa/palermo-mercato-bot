@@ -23,7 +23,7 @@ jobs:
 
       - name: Installa dipendenze
         run: |
-          pip install twikit
+          pip install git+https://github.com/d60/twikit.git
 
       - name: Test X
         run: |
