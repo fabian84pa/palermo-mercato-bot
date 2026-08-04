@@ -13,11 +13,21 @@ class TMWProvider(Provider):
     NEWS_URL = "https://www.tuttomercatoweb.com/serie-b"
 
     KEYWORDS = (
-        "palermo",
         "palermo fc",
+        "palermo calcio",
+        "palermo",
         "rosanero",
         "rosaneri",
         "inzaghi",
+    )
+
+    EXCLUDED_KEYWORDS = (
+        "comune di palermo",
+        "provincia di palermo",
+        "meteo palermo",
+        "cronaca palermo",
+        "aeroporto di palermo",
+        "palermo città",
     )
 
     HEADERS = {
@@ -60,6 +70,21 @@ class TMWProvider(Provider):
 
         return ""
 
+    def is_palermo_news(self, title: str) -> bool:
+
+        text = title.casefold()
+
+        if any(
+            word in text
+            for word in self.EXCLUDED_KEYWORDS
+        ):
+            return False
+
+        return any(
+            keyword in text
+            for keyword in self.KEYWORDS
+        )
+
     def fetch(self) -> list[NewsItem]:
 
         response = requests.get(
@@ -90,12 +115,7 @@ class TMWProvider(Provider):
             if not title or len(title) < 15:
                 continue
 
-            normalized_title = title.casefold()
-
-            if not any(
-                keyword in normalized_title
-                for keyword in self.KEYWORDS
-            ):
+            if not self.is_palermo_news(title):
                 continue
 
             link = urljoin(
