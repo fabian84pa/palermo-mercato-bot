@@ -1,5 +1,8 @@
 from core.engine import Engine
+
 from providers.di_marzio_provider import DiMarzioProvider
+from providers.tmw_provider import TMWProvider
+
 from telegram_sender import send_message
 
 from database import (
@@ -11,8 +14,10 @@ from database import (
 
 
 def main():
+
     providers = [
         DiMarzioProvider(),
+        TMWProvider(),
     ]
 
     seen_items = load_seen_items()
