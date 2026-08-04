@@ -1,9 +1,17 @@
+import sys
+
+sys.path.append(
+    "src"
+)
+
 from providers.x_provider import XProvider
 
 
 def main():
 
-    print("Avvio test XProvider")
+    print(
+        "Avvio test XProvider"
+    )
 
     provider = XProvider()
 
@@ -15,7 +23,9 @@ def main():
 
     for item in news:
 
-        print("\n====================")
+        print(
+            "\n===================="
+        )
 
         print(
             "Titolo:",
