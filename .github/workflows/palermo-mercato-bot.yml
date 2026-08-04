@@ -1,0 +1,20 @@
+name: Palermo Mercato Bot
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Scarica il repository
+        uses: actions/checkout@v4
+
+      - name: Configura Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Test
+        run: echo "Workflow Palermo Mercato configurato correttamente"
