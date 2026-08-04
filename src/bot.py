@@ -16,8 +16,9 @@ def main():
     message = (
         "📰 <b>Prima notizia trovata</b>\n\n"
         f"<b>{item.title}</b>\n\n"
-        f"Fonte: {item.source}\n"
-        f"{item.link}"
+        f"📰 Fonte: {item.source}\n"
+        f"📅 Data: {item.published}\n\n"
+        f'🔗 <a href="{item.link}">Apri la notizia</a>'
     )
 
     send_message(message)
