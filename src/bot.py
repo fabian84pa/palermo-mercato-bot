@@ -46,7 +46,7 @@ def main():
     )
 
 
-    # Traduzione automatica fonti X
+    # Traduzione automatica solo fonti X
     translator = Translator()
 
 
@@ -85,6 +85,7 @@ def main():
         return
 
 
+
     quality_news = []
 
 
@@ -108,6 +109,7 @@ def main():
                 item.id,
                 seen_items
             )
+
 
 
     print(
@@ -136,6 +138,7 @@ def main():
     )
 
 
+
     for item in quality_news[:3]:
 
 
@@ -160,6 +163,7 @@ def main():
             )
 
 
+
         summary_text = ""
 
 
@@ -174,14 +178,56 @@ def main():
                 short_summary += "..."
 
 
+
             summary_text = (
                 f"📝 <i>{short_summary}</i>\n\n"
             )
 
 
+
+        # Gestione ULTIM'ORA
+
+        breaking_words = (
+
+            "breaking",
+            "here we go",
+            "affare fatto",
+            "ufficiale",
+            "accordo",
+            "done deal",
+            "medical",
+            "visite mediche",
+
+        )
+
+
+        title_lower = item.title.lower()
+
+
+
+        if any(
+
+            word in title_lower
+
+            for word in breaking_words
+
+        ):
+
+            header = (
+                "🚨 <b>ULTIM'ORA PALERMO</b>"
+            )
+
+        else:
+
+            header = (
+                "🟣 <b>PALERMO CALCIOMERCATO</b>"
+            )
+
+
+
         message = (
 
-            "🚨 <b>PALERMO CALCIOMERCATO</b>\n\n"
+            f"{header}\n\n"
 
             f"{category}\n\n"
 
@@ -198,15 +244,18 @@ def main():
         )
 
 
+
         send_message(
             message
         )
+
 
 
         mark_as_seen(
             item.id,
             seen_items
         )
+
 
 
     save_seen_items(
