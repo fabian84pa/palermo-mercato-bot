@@ -37,9 +37,18 @@ def main():
         return
 
     for item in new_news[:5]:
+
+        summary_text = ""
+
+        if item.summary:
+            summary_text = (
+                f"📝 <i>{item.summary}</i>\n\n"
+            )
+
         message = (
             "🚨 <b>PALERMO CALCIOMERCATO</b>\n\n"
             f"📰 <b>{item.title}</b>\n\n"
+            f"{summary_text}"
             f"👤 Fonte: {item.source}\n\n"
             f'🔗 <a href="{item.link}">Apri la notizia</a>'
         )
