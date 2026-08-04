@@ -36,4 +36,5 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git add data/seen.json
           git commit -m "Aggiorna database notizie" || exit 0
+          git pull --rebase
           git push
