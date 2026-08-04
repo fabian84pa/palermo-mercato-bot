@@ -23,7 +23,7 @@ jobs:
 
       - name: Installa dipendenze
         run: |
-          pip install git+https://github.com/JustAnotherArchivist/snscrape.git
+          pip install twikit
 
       - name: Test X
         run: |
