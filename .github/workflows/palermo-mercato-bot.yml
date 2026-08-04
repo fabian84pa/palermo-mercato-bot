@@ -3,6 +3,9 @@ name: Palermo Mercato Bot
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   run-bot:
     runs-on: ubuntu-latest
@@ -10,6 +13,8 @@ jobs:
     steps:
       - name: Scarica il repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Configura Python
         uses: actions/setup-python@v5
@@ -24,3 +29,11 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python src/bot.py
+
+      - name: Salva database notizie
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add data/seen.json
+          git commit -m "Aggiorna database notizie" || exit 0
+          git push
