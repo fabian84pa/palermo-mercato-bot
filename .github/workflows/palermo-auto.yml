@@ -1,0 +1,24 @@
+name: Palermo Auto Test
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+
+  workflow_dispatch:
+
+
+jobs:
+
+  run-bot:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test scheduler
+        run: |
+          echo "Scheduler attivo"
+          date
