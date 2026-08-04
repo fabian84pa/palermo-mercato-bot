@@ -35,6 +35,17 @@ def main():
 
     print(f"Notizie trovate: {len(news)}")
 
+    # Debug qualità di tutte le notizie trovate
+    for item in news:
+        score = get_quality_score(
+            item.title,
+            item.source
+        )
+
+        print(
+            f"Qualità {score} | {item.source} | {item.title}"
+        )
+
     new_news = [
         item for item in news
         if not is_seen(item.id, seen_items)
@@ -49,7 +60,6 @@ def main():
         )
         return
 
-    # Filtro qualità
     quality_news = []
 
     for item in new_news:
@@ -60,7 +70,7 @@ def main():
         )
 
         print(
-            f"Qualità {score}: {item.title}"
+            f"Filtro qualità {score}: {item.title}"
         )
 
         if score >= MIN_QUALITY_SCORE:
@@ -86,7 +96,6 @@ def main():
 
         return
 
-    # Ordina per importanza
     quality_news.sort(
         key=lambda item: get_priority(
             item.title,
