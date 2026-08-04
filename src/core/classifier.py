@@ -1,11 +1,16 @@
-def classify_news(title: str) -> str:
+def classify_news(title: str, source: str = "") -> str:
     """
     Classifica una notizia di calciomercato Palermo.
     """
 
     text = title.casefold()
+    source_text = source.casefold()
 
-    # Ufficialità
+    # Fonte ufficiale club
+    if "palermo fc" in source_text:
+        return "🟢 UFFICIALE"
+
+    # Ufficialità dal titolo
     if any(
         keyword in text
         for keyword in (
@@ -15,6 +20,8 @@ def classify_news(title: str) -> str:
             "firma",
             "ha firmato",
             "comunicato",
+            "rinnovo",
+            "prolungamento",
         )
     ):
         return "🟢 UFFICIALE"
