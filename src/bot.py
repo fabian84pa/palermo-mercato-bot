@@ -2,25 +2,41 @@ from core.engine import Engine
 from providers.di_marzio_provider import DiMarzioProvider
 from telegram_sender import send_message
 
+from database import (
+    load_seen_items,
+    save_seen_items,
+    is_seen,
+    mark_as_seen,
+)
+
 
 def main():
     providers = [
         DiMarzioProvider(),
     ]
 
+    seen_items = load_seen_items()
+
     engine = Engine(providers)
     news = engine.fetch_all()
 
     print(f"Notizie trovate: {len(news)}")
 
-    if not news:
+    new_news = [
+        item for item in news
+        if not is_seen(item.id, seen_items)
+    ]
+
+    print(f"Nuove notizie: {len(new_news)}")
+
+    if not new_news:
         send_message(
             "ℹ️ <b>Palermo Mercato Bot</b>\n\n"
-            "Nessuna nuova notizia trovata da Gianluca Di Marzio."
+            "Nessuna nuova notizia."
         )
         return
 
-    for item in news[:5]:
+    for item in new_news[:5]:
         message = (
             "🚨 <b>PALERMO CALCIOMERCATO</b>\n\n"
             f"📰 <b>{item.title}</b>\n\n"
@@ -29,6 +45,10 @@ def main():
         )
 
         send_message(message)
+
+        mark_as_seen(item.id, seen_items)
+
+    save_seen_items(seen_items)
 
 
 if __name__ == "__main__":
