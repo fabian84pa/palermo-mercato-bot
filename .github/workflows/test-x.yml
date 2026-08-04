@@ -1,4 +1,4 @@
-name: Test X Provider
+name: Test X Browser
 
 on:
   workflow_dispatch:
@@ -23,8 +23,9 @@ jobs:
 
       - name: Installa dipendenze
         run: |
-          pip install git+https://github.com/d60/twikit.git
+          pip install playwright
+          playwright install chromium
 
-      - name: Test X
+      - name: Test X Browser
         run: |
-          python test_x.py
+          python test_x_browser.py
