@@ -10,9 +10,53 @@ def get_quality_score(title: str, source: str = "") -> int:
 
     score = 0
 
-    # Fonte ufficiale
+    # Esclusioni contenuti non di mercato
+    excluded_keywords = (
+        "biglietto",
+        "biglietti",
+        "ticket",
+        "store",
+        "shop",
+        "community",
+        "sponsor",
+        "marketing",
+        "evento",
+        "eventi",
+        "academy",
+        "junior",
+        "codice etico",
+    )
+
+    if any(
+        keyword in text
+        for keyword in excluded_keywords
+    ):
+        return 0
+
+    # Fonte ufficiale Palermo FC
     if "palermo fc" in source_text:
-        score += 100
+
+        score += 50
+
+        # Bonus solo se è realmente mercato
+        if any(
+            keyword in text
+            for keyword in (
+                "acquista",
+                "acquistato",
+                "ingaggia",
+                "firma",
+                "firmato",
+                "ufficiale",
+                "annuncia",
+                "annunciato",
+                "rinnovo",
+                "prolungamento",
+                "cessione",
+                "arriva",
+            )
+        ):
+            score += 50
 
     # Ufficialità
     if any(
@@ -29,7 +73,7 @@ def get_quality_score(title: str, source: str = "") -> int:
     ):
         score += 70
 
-    # Trattativa avanzata
+    # Trattative avanzate
     if any(
         keyword in text
         for keyword in (
