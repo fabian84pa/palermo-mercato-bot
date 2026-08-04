@@ -35,17 +35,6 @@ def main():
 
     print(f"Notizie trovate: {len(news)}")
 
-    # Debug qualità
-    for item in news:
-        score = get_quality_score(
-            item.title,
-            item.source
-        )
-
-        print(
-            f"Qualità {score} | {item.source} | {item.title}"
-        )
-
     new_news = [
         item for item in news
         if not is_seen(item.id, seen_items)
@@ -53,8 +42,8 @@ def main():
 
     print(f"Nuove notizie: {len(new_news)}")
 
-    # Nessuna notizia nuova:
-    # non inviare nulla su Telegram
+    # Nessuna nuova notizia:
+    # nessun messaggio Telegram
     if not new_news:
         return
 
@@ -65,10 +54,6 @@ def main():
         score = get_quality_score(
             item.title,
             item.source
-        )
-
-        print(
-            f"Filtro qualità {score}: {item.title}"
         )
 
         if score >= MIN_QUALITY_SCORE:
@@ -84,8 +69,7 @@ def main():
         f"Notizie valide dopo filtro qualità: {len(quality_news)}"
     )
 
-    # Nessuna notizia abbastanza importante:
-    # non inviare nulla
+    # Nessuna notizia abbastanza importante
     if not quality_news:
         save_seen_items(seen_items)
         return
