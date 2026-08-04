@@ -1,9 +1,9 @@
 from core.engine import Engine
-
 from core.classifier import classify_news
 
 from providers.di_marzio_provider import DiMarzioProvider
 from providers.tmw_provider import TMWProvider
+from providers.palermo_fc_provider import PalermoFCProvider
 
 from telegram_sender import send_message
 
@@ -20,6 +20,7 @@ def main():
     providers = [
         DiMarzioProvider(),
         TMWProvider(),
+        PalermoFCProvider(),
     ]
 
     seen_items = load_seen_items()
