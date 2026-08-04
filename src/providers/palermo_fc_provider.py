@@ -13,15 +13,29 @@ class PalermoFCProvider(Provider):
     NEWS_URL = "https://www.palermofc.com/news"
 
     KEYWORDS = (
-        "palermo",
-        "prima squadra",
-        "calciomercato",
-        "mercato",
+        "ufficiale",
+        "firma",
+        "firmato",
+        "nuovo acquisto",
         "acquista",
         "ingaggia",
-        "firma",
-        "ufficiale",
+        "benvenuto",
+        "arriva",
         "cessione",
+        "rinnovo",
+        "prolungamento",
+    )
+
+    EXCLUDED_KEYWORDS = (
+        "community",
+        "codice etico",
+        "biglietteria",
+        "store",
+        "ticket",
+        "sponsor",
+        "marketing",
+        "junior",
+        "academy",
     )
 
     HEADERS = {
@@ -64,6 +78,21 @@ class PalermoFCProvider(Provider):
 
         return ""
 
+    def is_market_news(self, title: str) -> bool:
+
+        text = title.casefold()
+
+        if any(
+            keyword in text
+            for keyword in self.EXCLUDED_KEYWORDS
+        ):
+            return False
+
+        return any(
+            keyword in text
+            for keyword in self.KEYWORDS
+        )
+
     def fetch(self) -> list[NewsItem]:
 
         response = requests.get(
@@ -94,12 +123,7 @@ class PalermoFCProvider(Provider):
             if not title or len(title) < 15:
                 continue
 
-            normalized_title = title.casefold()
-
-            if not any(
-                keyword in normalized_title
-                for keyword in self.KEYWORDS
-            ):
+            if not self.is_market_news(title):
                 continue
 
             link = urljoin(
