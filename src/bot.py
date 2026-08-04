@@ -1,5 +1,7 @@
 from core.engine import Engine
 
+from core.classifier import classify_news
+
 from providers.di_marzio_provider import DiMarzioProvider
 from providers.tmw_provider import TMWProvider
 
@@ -41,8 +43,9 @@ def main():
         )
         return
 
-    # Limite massimo notifiche per esecuzione
     for item in new_news[:3]:
+
+        category = classify_news(item.title)
 
         summary_text = ""
 
@@ -58,6 +61,7 @@ def main():
 
         message = (
             "🚨 <b>PALERMO CALCIOMERCATO</b>\n\n"
+            f"{category}\n\n"
             f"📰 <b>{item.title}</b>\n\n"
             f"{summary_text}"
             f"📰 Fonte: <b>{item.source}</b>\n\n"
