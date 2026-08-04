@@ -1,5 +1,6 @@
 from core.engine import Engine
 from core.classifier import classify_news
+from core.priority import get_priority
 
 from providers.di_marzio_provider import DiMarzioProvider
 from providers.tmw_provider import TMWProvider
@@ -44,9 +45,20 @@ def main():
         )
         return
 
+    # Ordina per importanza
+    new_news.sort(
+        key=lambda item: get_priority(
+            item.title,
+            item.source
+        )
+    )
+
     for item in new_news[:3]:
 
-        category = classify_news(item.title)
+        category = classify_news(
+            item.title,
+            item.source
+        )
 
         summary_text = ""
 
