@@ -1,0 +1,31 @@
+name: Test Translator
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  test-translator:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Scarica repository
+        uses: actions/checkout@v4
+
+
+      - name: Configura Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+
+      - name: Installa dipendenze
+        run: |
+          pip install -r requirements.txt
+
+
+      - name: Test Translator
+        run: |
+          python test_translator.py
