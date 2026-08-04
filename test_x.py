@@ -1,4 +1,5 @@
-import snscrape.modules.twitter as sntwitter
+from twikit import Client
+import asyncio
 
 
 ACCOUNTS = [
@@ -9,39 +10,48 @@ ACCOUNTS = [
 ]
 
 
-for account in ACCOUNTS:
+async def main():
 
-    print("\n====================")
-    print(f"Test account: @{account}")
-    print("====================")
+    client = Client(
+        "en-US"
+    )
 
-    try:
+    for account in ACCOUNTS:
 
-        scraper = sntwitter.TwitterUserScraper(
-            account
-        )
+        print("\n====================")
+        print(f"Test account: @{account}")
+        print("====================")
 
-        count = 0
+        try:
 
-        for tweet in scraper.get_items():
-
-            print(
-                tweet.date,
-                "|",
-                tweet.rawContent[:150]
+            user = await client.get_user_by_screen_name(
+                account
             )
 
-            count += 1
+            print(
+                f"ID trovato: {user.id}"
+            )
 
-            if count >= 3:
-                break
+            tweets = await client.get_user_tweets(
+                user.id,
+                "Tweets",
+                count=3
+            )
 
-        if count == 0:
-            print("Nessun tweet trovato")
+            for tweet in tweets:
 
-    except Exception as e:
+                print(
+                    tweet.created_at,
+                    "|",
+                    tweet.text[:150]
+                )
 
-        print(
-            "Errore:",
-            e
-        )
+        except Exception as e:
+
+            print(
+                "Errore:",
+                e
+            )
+
+
+asyncio.run(main())
