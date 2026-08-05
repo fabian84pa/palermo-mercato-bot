@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import hashlib
 from datetime import datetime
 
 from playwright.sync_api import sync_playwright
@@ -64,11 +65,13 @@ class XProvider(Provider):
         return " ".join(lines)
 
 
+
     def is_relevant(self, text):
 
         keywords = self.load_keywords()
 
         normalized = text.casefold()
+
 
         for keyword in keywords:
 
@@ -80,7 +83,32 @@ class XProvider(Provider):
 
                 return True
 
+
         return False
+
+
+
+    def generate_id(self, source, text):
+
+        """
+        Genera un ID stabile.
+        Lo stesso tweet avrà sempre lo stesso identificativo.
+        """
+
+        unique_text = (
+            f"{source}-{text}"
+        )
+
+
+        hash_value = hashlib.sha256(
+            unique_text.encode("utf-8")
+        ).hexdigest()
+
+
+        return (
+            f"x-{source}-{hash_value[:16]}"
+        )
+
 
 
     def fetch(self) -> list[NewsItem]:
@@ -94,10 +122,13 @@ class XProvider(Provider):
                 headless=True
             )
 
+
             page = browser.new_page()
 
 
+
             for source in self.SOURCES:
+
 
                 print(
                     "\n===================="
@@ -108,11 +139,13 @@ class XProvider(Provider):
                 )
 
 
+
                 try:
 
                     url = (
                         f"https://x.com/{source}"
                     )
+
 
 
                     page.goto(
@@ -122,9 +155,11 @@ class XProvider(Provider):
                     )
 
 
+
                     page.wait_for_timeout(
                         8000
                     )
+
 
 
                     tweets = page.locator(
@@ -132,7 +167,9 @@ class XProvider(Provider):
                     )
 
 
+
                     count = tweets.count()
+
 
 
                     print(
@@ -140,20 +177,25 @@ class XProvider(Provider):
                     )
 
 
+
                     for i in range(
-                        min(count,5)
+                        min(count, 5)
                     ):
 
+
                         raw = tweets.nth(i).inner_text()
+
 
 
                         print(
                             "\n--- RAW TWEET ---"
                         )
 
+
                         print(
                             raw[:300]
                         )
+
 
 
                         text = self.clean_text(
@@ -161,13 +203,16 @@ class XProvider(Provider):
                         )
 
 
+
                         print(
                             "\n--- PULITO ---"
                         )
 
+
                         print(
                             text[:300]
                         )
+
 
 
                         if not self.is_relevant(
@@ -181,28 +226,35 @@ class XProvider(Provider):
                             continue
 
 
+
                         items.append(
 
                             NewsItem(
 
-                                id=(
-                                    f"x-{source}-"
-                                    f"{hash(text)}"
+                                id=self.generate_id(
+                                    source,
+                                    text
                                 ),
+
 
                                 title=text[:120],
 
+
                                 link=url,
+
 
                                 source=self.name,
 
+
                                 published=datetime.now().isoformat(),
+
 
                                 summary=text
 
                             )
 
                         )
+
 
 
                 except Exception as e:
@@ -212,7 +264,9 @@ class XProvider(Provider):
                     )
 
 
+
             browser.close()
+
 
 
         return items
