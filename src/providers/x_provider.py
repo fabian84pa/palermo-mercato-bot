@@ -77,6 +77,82 @@ class XProvider(Provider):
 
 
 
+    def normalize_for_id(
+        self,
+        text
+    ):
+
+        """
+        Crea testo stabile eliminando
+        elementi variabili di X.
+        """
+
+        text = text.casefold()
+
+
+        # elimina orari tipo:
+        # 8h - 35m - 2d
+        text = re.sub(
+            r"\b\d+\s*(m|h|d)\b",
+            "",
+            text
+        )
+
+
+        # elimina numeri statistiche:
+        # 10K 500 1.2M ecc.
+        text = re.sub(
+            r"\b\d+(\.\d+)?[km]?\b",
+            "",
+            text
+        )
+
+
+        # elimina emoji/caratteri inutili
+        text = re.sub(
+            r"[^\w\s@#]",
+            " ",
+            text
+        )
+
+
+        # elimina spazi doppi
+        text = " ".join(
+            text.split()
+        )
+
+
+        return text
+
+
+
+    def generate_id(
+        self,
+        source,
+        text
+    ):
+
+        clean = self.normalize_for_id(
+            text
+        )
+
+
+        unique_text = (
+            f"{source}-{clean}"
+        )
+
+
+        hash_value = hashlib.sha256(
+            unique_text.encode("utf-8")
+        ).hexdigest()
+
+
+        return (
+            f"x-{source}-{hash_value[:16]}"
+        )
+
+
+
     def is_relevant(self, text):
 
         keywords = self.load_keywords()
@@ -96,60 +172,6 @@ class XProvider(Provider):
 
 
         return False
-
-
-
-    def generate_id(
-        self,
-        source,
-        text
-    ):
-
-        """
-        ID stabile per X.
-        Ignora numeri, visualizzazioni,
-        like e statistiche variabili.
-        """
-
-        clean = text.casefold()
-
-
-        # elimina numeri tipo:
-        # 50K - 120 - 1.2M - orari
-        clean = re.sub(
-            r"\b\d+[kKmM]?\b",
-            "",
-            clean
-        )
-
-
-        # elimina caratteri inutili
-        clean = re.sub(
-            r"[^\w\s@#]",
-            " ",
-            clean
-        )
-
-
-        # normalizza spazi
-        clean = " ".join(
-            clean.split()
-        )
-
-
-        unique_text = (
-            f"{source}-{clean}"
-        )
-
-
-        hash_value = hashlib.sha256(
-            unique_text.encode("utf-8")
-        ).hexdigest()
-
-
-        return (
-            f"x-{source}-{hash_value[:16]}"
-        )
 
 
 
@@ -176,11 +198,9 @@ class XProvider(Provider):
                     "\n===================="
                 )
 
-
                 print(
                     f"CONTROLLO X: @{source}"
                 )
-
 
 
                 try:
@@ -202,7 +222,6 @@ class XProvider(Provider):
                     )
 
 
-
                     tweets = page.locator(
                         "article"
                     )
@@ -218,23 +237,20 @@ class XProvider(Provider):
 
 
                     for i in range(
-                        min(count, 5)
+                        min(count,5)
                     ):
 
 
                         raw = tweets.nth(i).inner_text()
 
 
-
                         print(
                             "\n--- RAW TWEET ---"
                         )
 
-
                         print(
                             raw[:300]
                         )
-
 
 
                         text = self.clean_text(
@@ -242,11 +258,9 @@ class XProvider(Provider):
                         )
 
 
-
                         print(
                             "\n--- PULITO ---"
                         )
-
 
                         print(
                             text[:300]
@@ -273,7 +287,7 @@ class XProvider(Provider):
 
 
                         print(
-                            f"ID GENERATO: {item_id}"
+                            f"ID: {item_id}"
                         )
 
 
@@ -284,18 +298,13 @@ class XProvider(Provider):
 
                                 id=item_id,
 
-
                                 title=text[:120],
-
 
                                 link=url,
 
-
                                 source=self.name,
 
-
                                 published=datetime.now().isoformat(),
-
 
                                 summary=text
 
