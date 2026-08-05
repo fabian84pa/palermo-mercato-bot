@@ -6,7 +6,6 @@ from core.entity import format_player
 from core.translator import Translator
 
 from providers.di_marzio_provider import DiMarzioProvider
-from providers.tmw_provider import TMWProvider
 from providers.palermo_fc_provider import PalermoFCProvider
 from providers.x_provider import XProvider
 
@@ -23,25 +22,39 @@ from database import (
 MIN_QUALITY_SCORE = 30
 
 
-def main():
 
-    print("🚀 Avvio automatico Palermo Mercato Bot")
+def main():
 
 
     providers = [
+
         DiMarzioProvider(),
-        TMWProvider(),
+
         PalermoFCProvider(),
+
         XProvider(),
+
     ]
+
 
 
     seen_items = load_seen_items()
 
 
-    engine = Engine(providers)
+
+    print(
+        f"Database notizie caricate: {len(seen_items)}"
+    )
+
+
+
+    engine = Engine(
+        providers
+    )
+
 
     news = engine.fetch_all()
+
 
 
     print(
@@ -49,33 +62,51 @@ def main():
     )
 
 
-    # Traduzione automatica solo fonti X
+
     translator = Translator()
+
 
 
     for item in news:
 
+
         if item.source == "X Calciomercato":
+
 
             item.title = translator.translate(
                 item.title
             )
+
 
             item.summary = translator.translate(
                 item.summary
             )
 
 
-    new_news = [
 
-        item for item in news
+    new_news = []
+
+
+
+    for item in news:
+
 
         if not is_seen(
             item.id,
             seen_items
-        )
+        ):
 
-    ]
+            new_news.append(
+                item
+            )
+
+
+        else:
+
+            print(
+                f"Duplicato ignorato: {item.title}"
+            )
+
 
 
     print(
@@ -83,9 +114,8 @@ def main():
     )
 
 
-    if not new_news:
 
-        print("Nessuna nuova notizia")
+    if not new_news:
 
         return
 
@@ -94,28 +124,35 @@ def main():
     quality_news = []
 
 
+
     for item in new_news:
 
 
         score = get_quality_score(
+
             item.title,
+
             item.source
+
         )
 
 
         print(
-            f"DEBUG QUALITÀ: {item.title} | "
-            f"Fonte: {item.source} | "
-            f"Score: {score}"
+            f"QUALITÀ: {item.title} | Score: {score}"
         )
+
 
 
         if score >= MIN_QUALITY_SCORE:
 
-            quality_news.append(item)
+
+            quality_news.append(
+                item
+            )
 
 
         else:
+
 
             mark_as_seen(
                 item.id,
@@ -132,6 +169,7 @@ def main():
 
     if not quality_news:
 
+
         save_seen_items(
             seen_items
         )
@@ -140,13 +178,16 @@ def main():
 
 
 
-    # Ordina dalle notizie più importanti
     quality_news.sort(
 
         key=lambda item:
+
         get_priority(
+
             item.title,
+
             item.source
+
         ),
 
         reverse=True
@@ -159,28 +200,39 @@ def main():
 
 
         category = classify_news(
+
             item.title,
+
             item.source
+
         )
+
 
 
         player = format_player(
+
             item.title
+
         )
+
 
 
         player_text = ""
 
 
+
         if player:
 
             player_text = (
-                f"{player}\n\n"
+
+                f"👤 <b>Giocatore:</b> {player}\n\n"
+
             )
 
 
 
         summary_text = ""
+
 
 
         if item.summary:
@@ -196,25 +248,33 @@ def main():
 
 
             summary_text = (
+
                 f"📝 <i>{short_summary}</i>\n\n"
+
             )
 
 
 
-        # Gestione ULTIM'ORA
-
         breaking_words = (
 
             "breaking",
+
             "here we go",
+
             "affare fatto",
+
             "ufficiale",
+
             "accordo",
+
             "done deal",
+
             "medical",
+
             "visite mediche",
 
         )
+
 
 
         title_lower = item.title.lower()
@@ -229,19 +289,27 @@ def main():
 
         ):
 
+
             header = (
+
                 "🚨 <b>ULTIM'ORA PALERMO</b>"
+
             )
+
 
         else:
 
+
             header = (
+
                 "🟣 <b>PALERMO CALCIOMERCATO</b>"
+
             )
 
 
 
         message = (
+
 
             f"{header}\n\n"
 
@@ -257,34 +325,34 @@ def main():
 
             f'🔗 <a href="{item.link}">Leggi articolo</a>'
 
+
         )
 
-
-
-        print(
-            f"Invio Telegram: {item.title}"
-        )
 
 
         send_message(
+
             message
+
         )
 
 
 
         mark_as_seen(
+
             item.id,
+
             seen_items
+
         )
 
 
 
     save_seen_items(
+
         seen_items
+
     )
-
-
-    print("✅ Ciclo completato")
 
 
 
