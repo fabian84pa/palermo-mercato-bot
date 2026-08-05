@@ -28,6 +28,7 @@ class XProvider(Provider):
         return "X Calciomercato"
 
 
+
     def load_keywords(self):
 
         with open(
@@ -38,29 +39,38 @@ class XProvider(Provider):
 
             data = json.load(file)
 
+
         return tuple(
             data.get("keywords", [])
         )
+
 
 
     def clean_text(self, text):
 
         lines = []
 
+
         for line in text.splitlines():
 
             line = line.strip()
 
+
             if not line:
                 continue
+
 
             if line.lower() == "pinned":
                 continue
 
+
             if line.startswith("@"):
                 continue
 
+
             lines.append(line)
+
+
 
         return " ".join(lines)
 
@@ -88,11 +98,15 @@ class XProvider(Provider):
 
 
 
-    def generate_id(self, source, text):
+    def generate_id(
+        self,
+        source,
+        text
+    ):
 
         """
         Genera un ID stabile.
-        Lo stesso tweet avrà sempre lo stesso identificativo.
+        La stessa notizia avrà sempre lo stesso ID.
         """
 
         unique_text = (
@@ -134,6 +148,7 @@ class XProvider(Provider):
                     "\n===================="
                 )
 
+
                 print(
                     f"CONTROLLO X: @{source}"
                 )
@@ -147,13 +162,11 @@ class XProvider(Provider):
                     )
 
 
-
                     page.goto(
                         url,
                         wait_until="domcontentloaded",
                         timeout=60000
                     )
-
 
 
                     page.wait_for_timeout(
@@ -167,9 +180,7 @@ class XProvider(Provider):
                     )
 
 
-
                     count = tweets.count()
-
 
 
                     print(
