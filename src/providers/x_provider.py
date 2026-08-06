@@ -17,7 +17,9 @@ class XProvider(Provider):
         "MatteMoretto",
         "DiMarzio",
         "NicoSchira",
+        "Palermofficial",
     )
+
 
     KEYWORDS_FILE = Path(
         "data/palermo_keywords.json"
@@ -77,21 +79,18 @@ class XProvider(Provider):
 
 
 
-    def normalize_for_id(
-        self,
-        text
-    ):
+    def normalize_for_id(self, text):
 
         """
-        Crea testo stabile eliminando
-        elementi variabili di X.
+        Normalizza il testo X per evitare duplicati.
+        Rimuove elementi variabili.
         """
 
         text = text.casefold()
 
 
         # elimina orari tipo:
-        # 8h - 35m - 2d
+        # 5m - 2h - 1d
         text = re.sub(
             r"\b\d+\s*(m|h|d)\b",
             "",
@@ -99,8 +98,7 @@ class XProvider(Provider):
         )
 
 
-        # elimina numeri statistiche:
-        # 10K 500 1.2M ecc.
+        # elimina numeri e statistiche
         text = re.sub(
             r"\b\d+(\.\d+)?[km]?\b",
             "",
@@ -108,7 +106,7 @@ class XProvider(Provider):
         )
 
 
-        # elimina emoji/caratteri inutili
+        # elimina simboli inutili
         text = re.sub(
             r"[^\w\s@#]",
             " ",
@@ -116,7 +114,6 @@ class XProvider(Provider):
         )
 
 
-        # elimina spazi doppi
         text = " ".join(
             text.split()
         )
@@ -171,6 +168,15 @@ class XProvider(Provider):
                 return True
 
 
+
+        # tutte le comunicazioni ufficiali
+        # del Palermo passano
+
+        if "palermofficial" in normalized:
+
+            return True
+
+
         return False
 
 
@@ -198,9 +204,11 @@ class XProvider(Provider):
                     "\n===================="
                 )
 
+
                 print(
                     f"CONTROLLO X: @{source}"
                 )
+
 
 
                 try:
@@ -237,20 +245,23 @@ class XProvider(Provider):
 
 
                     for i in range(
-                        min(count,5)
+                        min(count, 5)
                     ):
 
 
                         raw = tweets.nth(i).inner_text()
 
 
+
                         print(
                             "\n--- RAW TWEET ---"
                         )
 
+
                         print(
                             raw[:300]
                         )
+
 
 
                         text = self.clean_text(
@@ -258,9 +269,11 @@ class XProvider(Provider):
                         )
 
 
+
                         print(
                             "\n--- PULITO ---"
                         )
+
 
                         print(
                             text[:300]
@@ -287,7 +300,7 @@ class XProvider(Provider):
 
 
                         print(
-                            f"ID: {item_id}"
+                            f"ID GENERATO: {item_id}"
                         )
 
 
@@ -298,13 +311,18 @@ class XProvider(Provider):
 
                                 id=item_id,
 
+
                                 title=text[:120],
+
 
                                 link=url,
 
+
                                 source=self.name,
 
+
                                 published=datetime.now().isoformat(),
+
 
                                 summary=text
 
