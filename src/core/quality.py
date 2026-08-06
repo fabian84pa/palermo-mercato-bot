@@ -34,21 +34,49 @@ def get_quality_score(title: str, source: str = "") -> int:
 
 
 
-    # Fonti mercato affidabili
+    # Fonte mercato affidabile
+
     if any(
         source_name in source_text
         for source_name in (
             "palermo fc",
             "x calciomercato",
             "gianluca di marzio",
-            "tuttomercatoweb",
         )
     ):
         score += 30
 
 
 
-    # Ufficialità
+    # Ufficialità Palermo FC
+    # anche per formule tipo:
+    # "Benvenuto in rosanero"
+
+    if "palermo fc" in source_text:
+
+        if any(
+            keyword in text
+            for keyword in (
+                "benvenuto",
+                "welcome",
+                "nuovo acquisto",
+                "nuovo giocatore",
+                "ufficiale",
+                "annuncia",
+                "annunciato",
+                "firma",
+                "firmato",
+                "rinnovo",
+                "prolungamento",
+            )
+        ):
+            score = 100
+            return score
+
+
+
+    # Ufficialità generale
+
     if any(
         keyword in text
         for keyword in (
@@ -60,7 +88,6 @@ def get_quality_score(title: str, source: str = "") -> int:
             "rinnovo",
             "prolungamento",
 
-            # inglese
             "official",
             "confirmed",
             "signed",
@@ -73,6 +100,7 @@ def get_quality_score(title: str, source: str = "") -> int:
 
 
     # Trattative avanzate
+
     if any(
         keyword in text
         for keyword in (
@@ -83,7 +111,6 @@ def get_quality_score(title: str, source: str = "") -> int:
             "chiuso",
             "arriva",
 
-            # inglese
             "agreement",
             "deal",
             "done deal",
@@ -96,6 +123,7 @@ def get_quality_score(title: str, source: str = "") -> int:
 
 
     # Interesse concreto
+
     if any(
         keyword in text
         for keyword in (
@@ -105,7 +133,6 @@ def get_quality_score(title: str, source: str = "") -> int:
             "offerta",
             "vicino",
 
-            # inglese
             "target",
             "talks",
             "in talks",
@@ -122,6 +149,7 @@ def get_quality_score(title: str, source: str = "") -> int:
 
 
     # Rumor deboli
+
     if any(
         keyword in text
         for keyword in (
@@ -131,13 +159,13 @@ def get_quality_score(title: str, source: str = "") -> int:
             "idea",
             "valuta",
 
-            # inglese
             "likes",
             "monitoring",
             "follows",
         )
     ):
         score += 15
+
 
 
     return score
