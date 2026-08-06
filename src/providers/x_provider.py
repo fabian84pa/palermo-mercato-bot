@@ -81,16 +81,10 @@ class XProvider(Provider):
 
     def normalize_for_id(self, text):
 
-        """
-        Normalizza il testo X per evitare duplicati.
-        Rimuove elementi variabili.
-        """
-
         text = text.casefold()
 
 
-        # elimina orari tipo:
-        # 5m - 2h - 1d
+        # elimina orari tipo 2h 30m 1d
         text = re.sub(
             r"\b\d+\s*(m|h|d)\b",
             "",
@@ -98,7 +92,7 @@ class XProvider(Provider):
         )
 
 
-        # elimina numeri e statistiche
+        # elimina statistiche numeriche
         text = re.sub(
             r"\b\d+(\.\d+)?[km]?\b",
             "",
@@ -106,7 +100,6 @@ class XProvider(Provider):
         )
 
 
-        # elimina simboli inutili
         text = re.sub(
             r"[^\w\s@#]",
             " ",
@@ -150,11 +143,79 @@ class XProvider(Provider):
 
 
 
-    def is_relevant(self, text):
+    def is_market_post(
+        self,
+        text
+    ):
+
+        normalized = text.casefold()
+
+
+        market_words = (
+
+            "benvenuto",
+
+            "ufficiale",
+
+            "firma",
+
+            "firmato",
+
+            "contratto",
+
+            "rinnovo",
+
+            "acquisto",
+
+            "acquista",
+
+            "cessione",
+
+            "ceduto",
+
+            "arriva",
+
+            "ingaggia",
+
+            "nuovo giocatore",
+
+            "welcome",
+
+            "signing",
+
+        )
+
+
+        return any(
+            word in normalized
+            for word in market_words
+        )
+
+
+
+    def is_relevant(
+        self,
+        text,
+        source
+    ):
+
+        normalized = text.casefold()
+
+
+        # Palermo ufficiale X:
+        # solo mercato
+        if source == "Palermofficial":
+
+            if self.is_market_post(text):
+
+                return True
+
+            return False
+
+
 
         keywords = self.load_keywords()
 
-        normalized = text.casefold()
 
 
         for keyword in keywords:
@@ -169,14 +230,6 @@ class XProvider(Provider):
 
 
 
-        # tutte le comunicazioni ufficiali
-        # del Palermo passano
-
-        if "palermofficial" in normalized:
-
-            return True
-
-
         return False
 
 
@@ -187,6 +240,7 @@ class XProvider(Provider):
 
 
         with sync_playwright() as p:
+
 
             browser = p.chromium.launch(
                 headless=True
@@ -245,7 +299,7 @@ class XProvider(Provider):
 
 
                     for i in range(
-                        min(count, 5)
+                        min(count,5)
                     ):
 
 
@@ -282,7 +336,8 @@ class XProvider(Provider):
 
 
                         if not self.is_relevant(
-                            text
+                            text,
+                            source
                         ):
 
                             print(
@@ -311,18 +366,13 @@ class XProvider(Provider):
 
                                 id=item_id,
 
-
                                 title=text[:120],
-
 
                                 link=url,
 
-
                                 source=self.name,
 
-
                                 published=datetime.now().isoformat(),
-
 
                                 summary=text
 
