@@ -1,4 +1,3 @@
-from pathlib import Path
 import hashlib
 import json
 import re
@@ -668,8 +667,11 @@ class XProvider(Provider):
                         source
                     )
 
-                    if source in self.SEARCH_QUERIES:
-                        for query in self.SEARCH_QUERIES[source]:
+                    # Ricerca X globale per parole chiave Palermo
+                    if source in self.ALLOWED_INSIDERS:
+
+                        for query in self.SEARCH_QUERIES.get("GLOBAL", []):
+
                             posts.extend(
                                 self.search_x_posts(
                                     page,
