@@ -52,14 +52,11 @@ class XProvider(Provider):
 
 
             return tuple(
-
                 keyword.casefold()
-
                 for keyword in data.get(
                     "keywords",
                     []
                 )
-
             )
 
 
@@ -74,52 +71,28 @@ class XProvider(Provider):
         text
     ):
 
-
         text = text.casefold()
 
 
-
-        # elimina orari X:
-        # 5m - 2h - 1d
-
         text = re.sub(
-
             r"\b\d+\s*(m|h|d|w)\b",
-
             "",
-
             text
-
         )
 
 
-
-        # elimina numeri statistiche
-
         text = re.sub(
-
             r"\b\d+[km]?\b",
-
             "",
-
             text
-
         )
 
-
-
-        # elimina spazi doppi
 
         text = re.sub(
-
             r"\s+",
-
             " ",
-
             text
-
         )
-
 
 
         return text.strip()
@@ -134,29 +107,20 @@ class XProvider(Provider):
     ):
 
 
-        # usa ID tweet reale
-
         match = re.search(
-
             r"/status/(\d+)",
-
             link
-
         )
 
 
         if match:
 
             return (
-
                 f"x-{source}-"
                 f"{match.group(1)}"
-
             )
 
 
-
-        # fallback
 
         clean = self.normalize_text(
             text
@@ -164,20 +128,16 @@ class XProvider(Provider):
 
 
         digest = hashlib.sha256(
-
             f"{source}-{clean}".encode(
                 "utf-8"
             )
-
         ).hexdigest()
 
 
 
         return (
-
             f"x-{source}-"
             f"{digest[:16]}"
-
         )
 
 
@@ -227,11 +187,8 @@ class XProvider(Provider):
 
 
         return any(
-
             word in normalized
-
             for word in context_words
-
         )
 
 
@@ -243,7 +200,6 @@ class XProvider(Provider):
 
 
         normalized = text.casefold()
-
 
 
         excluded = (
@@ -275,13 +231,9 @@ class XProvider(Provider):
         )
 
 
-
         if any(
-
             word in normalized
-
             for word in excluded
-
         ):
 
             return False
@@ -331,18 +283,11 @@ class XProvider(Provider):
         )
 
 
-
         return any(
-
             word in normalized
-
             for word in market_words
-
         )
-
-
-
-    def is_relevant(
+            def is_relevant(
         self,
         text,
         source
@@ -357,10 +302,8 @@ class XProvider(Provider):
 
 
             print(
-
                 "Palermo Official mercato:",
                 result
-
             )
 
 
@@ -371,6 +314,9 @@ class XProvider(Provider):
         return self.is_market_palermo_context(
             text
         )
+
+
+
     def extract_post(
         self,
         article: Locator
@@ -378,18 +324,33 @@ class XProvider(Provider):
 
         try:
 
+            text = ""
+
+
+            # Metodo principale
+
             tweet_box = article.locator(
                 '[data-testid="tweetText"]'
             )
 
 
-            if tweet_box.count() == 0:
+            if tweet_box.count() > 0:
+
+                text = tweet_box.inner_text()
+
+
+
+            else:
+
+                # Fallback nuovo layout X
+
+                text = article.inner_text()
+
+
+
+            if not text.strip():
 
                 return None
-
-
-
-            text = tweet_box.inner_text()
 
 
 
@@ -415,7 +376,6 @@ class XProvider(Provider):
                 )
 
 
-
                 parent = time_element.locator(
                     "xpath=.."
                 )
@@ -428,11 +388,13 @@ class XProvider(Provider):
 
                 if href:
 
+
                     if href.startswith(
                         "http"
                     ):
 
                         link = href
+
 
                     else:
 
@@ -554,8 +516,6 @@ class XProvider(Provider):
 
 
 
-            # scroll timeline
-
             page.mouse.wheel(
                 0,
                 6000
@@ -585,6 +545,7 @@ class XProvider(Provider):
         items = []
 
 
+
         with sync_playwright() as p:
 
 
@@ -607,7 +568,6 @@ class XProvider(Provider):
             for source in self.SOURCES:
 
 
-
                 print(
                     "\n===================="
                 )
@@ -623,15 +583,10 @@ class XProvider(Provider):
 
 
                     page.goto(
-
                         f"https://x.com/{source}",
-
                         wait_until="domcontentloaded",
-
                         timeout=60000
-
                     )
-
 
 
                     page.wait_for_timeout(
@@ -652,7 +607,6 @@ class XProvider(Provider):
                         link,
                         published
                     ) in posts:
-
 
 
                         print(
@@ -680,13 +634,9 @@ class XProvider(Provider):
 
 
                         item_id = self.generate_id(
-
                             source,
-
                             text,
-
                             link
-
                         )
 
 
@@ -720,7 +670,6 @@ class XProvider(Provider):
 
 
                 except Exception as e:
-
 
                     print(
                         f"Errore @{source}: {e}"
