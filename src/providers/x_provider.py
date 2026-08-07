@@ -1,10 +1,9 @@
 from pathlib import Path
-import json
 import hashlib
+import json
 import re
-from datetime import datetime
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import Locator, Page, sync_playwright
 
 from core.news import NewsItem
 from core.provider import Provider
@@ -26,8 +25,11 @@ class XProvider(Provider):
     )
 
 
+    MAX_POSTS_PER_SOURCE = 25
+
+
     @property
-    def name(self) -> str:
+    def name(self):
         return "X Calciomercato"
 
 
@@ -44,101 +46,87 @@ class XProvider(Provider):
 
 
         return tuple(
-            data.get("keywords", [])
+            x.casefold()
+            for x in data.get(
+                "keywords",
+                []
+            )
         )
 
 
 
-    def clean_text(self, text):
-
-        lines = []
-
-
-        for line in text.splitlines():
-
-            line = line.strip()
-
-
-            if not line:
-                continue
-
-
-            if line.lower() == "pinned":
-                continue
-
-
-            if line.startswith("@"):
-                continue
-
-
-            lines.append(line)
-
-
-
-        return " ".join(lines)
-
-
-
-    def normalize_for_id(self, text):
+    def normalize_text(
+        self,
+        text
+    ):
 
         text = text.casefold()
 
 
-        # elimina orari tipo 2h 30m 1d
         text = re.sub(
-            r"\b\d+\s*(m|h|d)\b",
-            "",
-            text
-        )
-
-
-        # elimina statistiche numeriche
-        text = re.sub(
-            r"\b\d+(\.\d+)?[km]?\b",
+            r"\b\d+\s*(m|h|d|w)\b",
             "",
             text
         )
 
 
         text = re.sub(
-            r"[^\w\s@#]",
+            r"\b\d+[km]?\b",
+            "",
+            text
+        )
+
+
+        text = re.sub(
+            r"\s+",
             " ",
             text
         )
 
 
-        text = " ".join(
-            text.split()
-        )
-
-
-        return text
+        return text.strip()
 
 
 
     def generate_id(
         self,
         source,
-        text
+        text,
+        link=""
     ):
 
-        clean = self.normalize_for_id(
+        # Nuovo metodo:
+        # usa ID tweet reale
+
+        match = re.search(
+            r"/status/(\d+)",
+            link
+        )
+
+
+        if match:
+
+            return (
+                f"x-{source}-"
+                f"{match.group(1)}"
+            )
+
+
+        # Compatibilità vecchi ID
+
+        clean = self.normalize_text(
             text
         )
 
 
-        unique_text = (
-            f"{source}-{clean}"
-        )
-
-
-        hash_value = hashlib.sha256(
-            unique_text.encode("utf-8")
+        digest = hashlib.sha256(
+            f"{source}-{clean}".encode()
         ).hexdigest()
 
 
         return (
-            f"x-{source}-{hash_value[:16]}"
+            f"x-{source}-"
+            f"{digest[:16]}"
         )
 
 
@@ -148,14 +136,60 @@ class XProvider(Provider):
         text
     ):
 
-        normalized = text.casefold()
+        text = text.casefold()
 
 
-        market_words = (
+        # esclusioni Palermo Official
+
+        excluded = (
+
+            "match day",
+
+            "trophy",
+
+            "torniamo in campo",
+
+            "scendiamo in campo",
+
+            "allenamento",
+
+            "training",
+
+            "partita",
+
+            "gara",
+
+            "diretta",
+
+            "streaming",
+
+            "live",
+
+            "amichevole",
+
+        )
+
+
+        if any(
+            word in text
+            for word in excluded
+        ):
+
+            return False
+
+
+
+        market = (
 
             "benvenuto",
 
+            "welcome",
+
             "ufficiale",
+
+            "annuncia",
+
+            "annunciato",
 
             "firma",
 
@@ -165,30 +199,32 @@ class XProvider(Provider):
 
             "rinnovo",
 
+            "prolungamento",
+
             "acquisto",
 
             "acquista",
 
-            "cessione",
+            "ingaggiato",
 
             "ceduto",
 
-            "arriva",
+            "cessione",
 
-            "ingaggia",
+            "prestito",
 
-            "nuovo giocatore",
-
-            "welcome",
+            "transfer",
 
             "signing",
+
+            "signed",
 
         )
 
 
         return any(
-            word in normalized
-            for word in market_words
+            word in text
+            for word in market
         )
 
 
@@ -202,15 +238,28 @@ class XProvider(Provider):
         normalized = text.casefold()
 
 
-        # Palermo ufficiale X:
-        # solo mercato
+
         if source == "Palermofficial":
 
-            if self.is_market_post(text):
+            result = self.is_market_post(
+                normalized
+            )
 
-                return True
 
-            return False
+            if result:
+
+                print(
+                    "Post mercato Palermo ufficiale"
+                )
+
+            else:
+
+                print(
+                    "Palermo Official scartato"
+                )
+
+
+            return result
 
 
 
@@ -220,7 +269,7 @@ class XProvider(Provider):
 
         for keyword in keywords:
 
-            if keyword.casefold() in normalized:
+            if keyword in normalized:
 
                 print(
                     f"Keyword trovata: {keyword}"
@@ -234,7 +283,80 @@ class XProvider(Provider):
 
 
 
-    def fetch(self) -> list[NewsItem]:
+    def extract_post(
+        self,
+        article: Locator
+    ):
+
+        try:
+
+            text_box = article.locator(
+                '[data-testid="tweetText"]'
+            )
+
+
+            if text_box.count() == 0:
+
+                return None
+
+
+            text = text_box.inner_text()
+
+
+
+            time = article.locator(
+                "time"
+            )
+
+
+            link = ""
+
+            published = ""
+
+
+            if time.count():
+
+                published = (
+                    time.get_attribute(
+                        "datetime"
+                    )
+                    or ""
+                )
+
+
+                parent = time.locator(
+                    "xpath=.."
+                )
+
+
+                href = parent.get_attribute(
+                    "href"
+                )
+
+
+                if href:
+
+                    link = (
+                        "https://x.com"
+                        + href
+                    )
+
+
+
+            return (
+                text,
+                link,
+                published
+            )
+
+
+        except Exception:
+
+            return None
+
+
+
+    def fetch(self):
 
         items = []
 
@@ -255,41 +377,31 @@ class XProvider(Provider):
 
 
                 print(
-                    "\n===================="
+                    f"\nCONTROLLO X: @{source}"
                 )
-
-
-                print(
-                    f"CONTROLLO X: @{source}"
-                )
-
 
 
                 try:
 
-                    url = (
-                        f"https://x.com/{source}"
-                    )
-
-
                     page.goto(
-                        url,
+                        f"https://x.com/{source}",
                         wait_until="domcontentloaded",
                         timeout=60000
                     )
 
 
                     page.wait_for_timeout(
-                        8000
+                        5000
                     )
 
 
-                    tweets = page.locator(
+
+                    articles = page.locator(
                         "article"
                     )
 
 
-                    count = tweets.count()
+                    count = articles.count()
 
 
                     print(
@@ -299,35 +411,31 @@ class XProvider(Provider):
 
 
                     for i in range(
-                        min(count,5)
+                        min(
+                            count,
+                            self.MAX_POSTS_PER_SOURCE
+                        )
                     ):
 
 
-                        raw = tweets.nth(i).inner_text()
+                        post = self.extract_post(
+                            articles.nth(i)
+                        )
+
+
+                        if not post:
+
+                            continue
+
+
+
+                        text, link, published = post
 
 
 
                         print(
-                            "\n--- RAW TWEET ---"
+                            "\n--- POST ---"
                         )
-
-
-                        print(
-                            raw[:300]
-                        )
-
-
-
-                        text = self.clean_text(
-                            raw
-                        )
-
-
-
-                        print(
-                            "\n--- PULITO ---"
-                        )
-
 
                         print(
                             text[:300]
@@ -340,18 +448,16 @@ class XProvider(Provider):
                             source
                         ):
 
-                            print(
-                                "Scartato"
-                            )
-
                             continue
 
 
 
                         item_id = self.generate_id(
                             source,
-                            text
+                            text,
+                            link
                         )
+
 
 
                         print(
@@ -368,18 +474,17 @@ class XProvider(Provider):
 
                                 title=text[:120],
 
-                                link=url,
+                                link=link,
 
                                 source=self.name,
 
-                                published=datetime.now().isoformat(),
+                                published=published,
 
                                 summary=text
 
                             )
 
                         )
-
 
 
                 except Exception as e:
