@@ -572,6 +572,19 @@ class XProvider(Provider):
 
             page.wait_for_timeout(6000)
 
+            print("===== DEBUG SEARCH X =====")
+            print("URL:", page.url)
+            print("TITLE:", page.title())
+
+            try:
+                body_preview = page.locator("body").inner_text(timeout=10000)
+                print("BODY PREVIEW:")
+                print(body_preview[:1000])
+            except Exception as e:
+                print("Errore lettura body:", e)
+
+            print("==========================")
+
             articles = page.locator("article")
             count = articles.count()
 
