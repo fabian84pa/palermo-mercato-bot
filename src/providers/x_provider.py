@@ -287,7 +287,7 @@ class XProvider(Provider):
             word in normalized
             for word in market_words
         )
-            def is_relevant(
+    def is_relevant(
         self,
         text,
         source
