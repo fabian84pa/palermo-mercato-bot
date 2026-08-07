@@ -677,7 +677,7 @@ class XProvider(Provider):
                     # Ricerca X globale per parole chiave Palermo
                     if source in self.ALLOWED_INSIDERS:
 
-                        for query in self.SEARCH_TERMS.get("GLOBAL", []):
+                        for query in self.SEARCH_TERMS:
 
                             posts.extend(
                                 self.search_x_posts(
