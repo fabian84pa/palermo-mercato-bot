@@ -1,4 +1,5 @@
 from pathlib import Path
+# VERSIONE PALERMO SEARCH X - insider + keyword Palermo
 import hashlib
 import json
 import re
@@ -39,15 +40,13 @@ class XProvider(Provider):
 
 
 
-    SEARCH_QUERIES = {
-        "GLOBAL": [
-            "Palermo",
-            "Palermo FC",
-            "rosanero",
-            "rosaneri",
-            "aquile",
-        ],
-    }
+    SEARCH_TERMS = (
+        "Palermo",
+        "Palermo FC",
+        "rosanero",
+        "rosaneri",
+        "aquile",
+    )
 
 
 
@@ -560,8 +559,8 @@ class XProvider(Provider):
         results = []
 
         try:
-            url_query = f"from%3A{source}%20{query}"
-            url = f"https://x.com/search?q={url_query}&src=typed_query"
+            url_query = f"{query}"
+            url = f"https://x.com/search?q={url_query}&f=live&src=typed_query"
 
             print(f"CONTROLLO SEARCH X: {url}")
 
@@ -606,6 +605,13 @@ class XProvider(Provider):
 
         return merged
 
+
+
+    def is_allowed_insider(self, text):
+        return any(
+            insider.casefold() in text.casefold()
+            for insider in self.ALLOWED_INSIDERS
+        )
 
     def fetch(self):
 
