@@ -30,6 +30,31 @@ class XProvider(Provider):
     MAX_POSTS_PER_SOURCE = 50
 
 
+    SEARCH_QUERIES = {
+        "MatteMoretto": [
+            "Palermo",
+            "rosanero",
+            "Almena",
+            "Osti",
+            "Inzaghi",
+            "Strefezza",
+            "Pohjanpalo",
+        ],
+        "FabrizioRomano": [
+            "Palermo",
+            "rosanero",
+        ],
+        "DiMarzio": [
+            "Palermo",
+            "rosanero",
+        ],
+        "NicoSchira": [
+            "Palermo",
+            "rosanero",
+        ],
+    }
+
+
 
     @property
     def name(self):
@@ -172,11 +197,6 @@ class XProvider(Provider):
 
             "pohjanpalo",
 
-            "mercato",
-
-            "calciomercato",
-
-            "transfer",
 
         )
 
@@ -287,7 +307,7 @@ class XProvider(Provider):
             word in normalized
             for word in market_words
         )
-    def is_relevant(
+            def is_relevant(
         self,
         text,
         source
@@ -539,6 +559,59 @@ class XProvider(Provider):
 
 
 
+
+
+    def search_x_posts(self, page: Page, source, query):
+        results = []
+
+        try:
+            url_query = f"from%3A{source}%20{query}"
+            url = f"https://x.com/search?q={url_query}&src=typed_query"
+
+            print(f"CONTROLLO SEARCH X: {url}")
+
+            page.goto(
+                url,
+                wait_until="domcontentloaded",
+                timeout=60000
+            )
+
+            page.wait_for_timeout(6000)
+
+            articles = page.locator("article")
+            count = articles.count()
+
+            print(f"Search tweet trovati: {count}")
+
+            for i in range(min(count, 10)):
+                post = self.extract_post(articles.nth(i))
+
+                if post:
+                    results.append(post)
+
+        except Exception as e:
+            print(f"Errore ricerca X {source} {query}: {e}")
+
+        return results
+
+
+    def merge_posts(self, posts):
+        merged = []
+        seen = set()
+
+        for post in posts:
+            text, link, published = post
+            key = link or self.normalize_text(text)
+
+            if key in seen:
+                continue
+
+            seen.add(key)
+            merged.append(post)
+
+        return merged
+
+
     def fetch(self):
 
 
@@ -599,6 +672,18 @@ class XProvider(Provider):
                         page,
                         source
                     )
+
+                    if source in self.SEARCH_QUERIES:
+                        for query in self.SEARCH_QUERIES[source]:
+                            posts.extend(
+                                self.search_x_posts(
+                                    page,
+                                    source,
+                                    query
+                                )
+                            )
+
+                    posts = self.merge_posts(posts)
 
 
 
