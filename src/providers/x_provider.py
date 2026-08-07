@@ -1,4 +1,3 @@
-from pathlib import Path
 import hashlib
 import json
 import re
@@ -29,28 +28,23 @@ class XProvider(Provider):
 
     MAX_POSTS_PER_SOURCE = 50
 
+    ALLOWED_INSIDERS = (
+        "MatteMoretto",
+        "DiMarzio",
+        "FabrizioRomano",
+        "NicoSchira",
+        "Palermofficial",
+    )
+
+
 
     SEARCH_QUERIES = {
-        "MatteMoretto": [
+        "GLOBAL": [
             "Palermo",
+            "Palermo FC",
             "rosanero",
-            "Almena",
-            "Osti",
-            "Inzaghi",
-            "Strefezza",
-            "Pohjanpalo",
-        ],
-        "FabrizioRomano": [
-            "Palermo",
-            "rosanero",
-        ],
-        "DiMarzio": [
-            "Palermo",
-            "rosanero",
-        ],
-        "NicoSchira": [
-            "Palermo",
-            "rosanero",
+            "rosaneri",
+            "aquile",
         ],
     }
 
@@ -307,7 +301,7 @@ class XProvider(Provider):
             word in normalized
             for word in market_words
         )
-    def is_relevant(
+            def is_relevant(
         self,
         text,
         source
