@@ -46,6 +46,11 @@ class XProvider(Provider):
         "rosanero",
         "rosaneri",
         "aquile",
+        "Almena",
+        "Osti",
+        "Inzaghi",
+        "Strefezza",
+        "Pohjanpalo",
     )
 
 
@@ -450,7 +455,7 @@ class XProvider(Provider):
 
 
 
-        for scroll in range(12):
+        for scroll in range(30):
 
 
             articles = page.locator(
@@ -572,7 +577,7 @@ class XProvider(Provider):
 
             page.wait_for_timeout(6000)
 
-            print("===== DEBUG SEARCH X =====")
+            print("===== SEARCH X DISABLED =====")
             print("URL:", page.url)
             print("TITLE:", page.title())
 
@@ -690,7 +695,7 @@ class XProvider(Provider):
                     # Ricerca X globale per parole chiave Palermo
                     if source in self.ALLOWED_INSIDERS:
 
-                        for query in self.SEARCH_TERMS:
+                        for query in []:
 
                             posts.extend(
                                 self.search_x_posts(
