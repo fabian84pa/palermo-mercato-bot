@@ -11,6 +11,9 @@ BLACKLIST = (
     "mercato",
     "tuttomercatoweb",
     "gianluca di marzio",
+    "matteo moretto",
+    "fabrizio romano",
+    "nico schira",
 )
 
 
@@ -22,6 +25,10 @@ def clean_name(name: str) -> str:
     name = name.strip()
 
     if name.casefold() in BLACKLIST:
+        return ""
+
+    # Gli insider non possono mai essere giocatori
+    if any(insider in name.casefold() for insider in ("matteo moretto", "fabrizio romano", "nico schira", "gianluca di marzio")):
         return ""
 
     return name
