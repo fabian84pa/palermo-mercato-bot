@@ -1,6 +1,5 @@
 # VERSIONE PALERMO v9 - raccolta profili estesa\nfrom pathlib import Path
 # VERSIONE PALERMO SEARCH X - insider + keyword Palermo
-from pathlib import Path
 import hashlib
 import json
 import re
@@ -13,6 +12,15 @@ from core.provider import Provider
 
 
 class XProvider(Provider):
+
+    INSIDER_NAMES_TO_IGNORE = (
+        "Matteo Moretto",
+        "Fabrizio Romano",
+        "Nico Schira",
+        "Gianluca Di Marzio",
+    )
+
+
 
 
     SOURCES = (
@@ -631,6 +639,18 @@ class XProvider(Provider):
             insider.casefold() in text.casefold()
             for insider in self.ALLOWED_INSIDERS
         )
+
+
+    def clean_x_timestamp(self, text):
+        import re
+        patterns = [
+            r"\b\d+[mh]\b",
+            r"\b\d+d\b",
+            r"\b[A-Z][a-z]{2}\s\d{1,2}\b",
+        ]
+        for pattern in patterns:
+            text = re.sub(pattern, "", text)
+        return text.strip()
 
     def fetch(self):
 
