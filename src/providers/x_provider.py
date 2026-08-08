@@ -1,5 +1,6 @@
 # VERSIONE PALERMO v9 - raccolta profili estesa\nfrom pathlib import Path
 # VERSIONE PALERMO SEARCH X - insider + keyword Palermo
+from pathlib import Path
 import hashlib
 import json
 import re
