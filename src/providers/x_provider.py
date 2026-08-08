@@ -1,4 +1,4 @@
-from pathlib import Path
+# VERSIONE PALERMO v9 - raccolta profili estesa\nfrom pathlib import Path
 # VERSIONE PALERMO SEARCH X - insider + keyword Palermo
 import hashlib
 import json
@@ -455,7 +455,7 @@ class XProvider(Provider):
 
 
 
-        for scroll in range(30):
+        for scroll in range(50):
 
 
             articles = page.locator(
