@@ -176,50 +176,17 @@ class XProvider(Provider):
 
 
 
-    def is_market_palermo_context(
-        self,
-        text
-    ):
-
-
-        context_words = (
-
-            "palermo",
-
-            "palerm",
-
-            "rosanero",
-
-            "almena",
-
-            "al-qadisiyya",
-
-            "al-qadisiyah",
-
-            "al qadisiyya",
-
-            "osti",
-
-            "inzaghi",
-
-            "strefezza",
-
-            "pohjanpalo",
-
-
-        )
-
-
-
+    def is_market_palermo_context(self, text):
+        """Accetta solo tweet con riferimento esplicito al Palermo."""
         normalized = text.casefold()
-
-
-
-        return any(
-            word in normalized
-            for word in context_words
+        palermo_markers = (
+            "palermo",
+            "palermo fc",
+            "@palermofficial",
+            "rosanero",
+            "rosaneri",
         )
-
+        return any(marker in normalized for marker in palermo_markers)
 
 
     def is_market_post_official(
@@ -643,15 +610,36 @@ class XProvider(Provider):
 
 
     def clean_x_timestamp(self, text):
-        import re
         patterns = [
-            r"\b\d+[mh]\b",
-            r"\b\d+d\b",
-            r"\b[A-Z][a-z]{2}\s\d{1,2}\b",
+            r"(?mi)^\s*\d+\s*[mhdw]\s*$",
+            r"(?mi)^\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s*$",
         ]
         for pattern in patterns:
             text = re.sub(pattern, "", text)
         return text.strip()
+
+    def clean_x_display_text(self, text):
+        """Rimuove timestamp e contatori X isolati, non i numeri nelle frasi."""
+        if not text:
+            return ""
+
+        cleaned = []
+        counter_re = re.compile(r"^\s*\d+(?:[.,]\d+)?[KMB]?\s*$", re.I)
+        time_re = re.compile(
+            r"^\s*(?:\d+\s*[mhdw]|"
+            r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2})\s*$",
+            re.I,
+        )
+
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if time_re.fullmatch(stripped) or counter_re.fullmatch(stripped):
+                continue
+            cleaned.append(line)
+
+        return "\n".join(cleaned).strip()
 
     def fetch(self):
 
@@ -737,6 +725,9 @@ class XProvider(Provider):
                         published
                     ) in posts:
 
+
+                        
+                        text = self.clean_x_display_text(text)
 
                         print(
                             "\n--- POST ---"
