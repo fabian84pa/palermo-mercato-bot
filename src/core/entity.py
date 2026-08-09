@@ -27,10 +27,6 @@ def clean_name(name: str) -> str:
     if name.casefold() in BLACKLIST:
         return ""
 
-    # Gli insider non possono mai essere giocatori
-    if any(insider in name.casefold() for insider in ("matteo moretto", "fabrizio romano", "nico schira", "gianluca di marzio")):
-        return ""
-
     return name
 
 
@@ -72,15 +68,5 @@ def extract_player(title: str) -> str:
 
 
 def format_player(title: str) -> str:
-    """
-    Formatta il giocatore per Telegram.
-    """
-
-    player = extract_player(title)
-
-    if player:
-        return (
-            f"👤 <b>Giocatore:</b> {player}"
-        )
-
-    return ""
+    """Restituisce solo il nome del giocatore."""
+    return extract_player(title)
