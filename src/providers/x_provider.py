@@ -342,6 +342,23 @@ class XProvider(Provider):
             if photo.count() > 0:
                 image_url = photo.first.get_attribute("src") or ""
 
+            # Debug mirato + fallback: X può cambiare il wrapper delle immagini.
+            # Per i tweet Palermo controlliamo anche tutte le immagini pbs.twimg.com/media.
+            if "@Palermofficial" in text or "Palermo F.C." in text or "Palermo FC" in text:
+                all_imgs = article.locator("img")
+                print(f"MEDIA DEBUG @Palermofficial - img trovate: {all_imgs.count()}")
+                for i in range(all_imgs.count()):
+                    src = all_imgs.nth(i).get_attribute("src") or ""
+                    if "pbs.twimg.com/media/" in src:
+                        print(f"MEDIA DEBUG candidate: {src}")
+                        if not image_url:
+                            image_url = src
+
+                print(
+                    "MEDIA DEBUG scelta:",
+                    image_url if image_url else "NESSUNA FOTO"
+                )
+
             return (
                 text,
                 link,
