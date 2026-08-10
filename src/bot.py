@@ -235,12 +235,29 @@ def main():
         # "UFFICIALE" di mercato. Manteniamo invece partita/infortuni/mercato
         # quando il classifier trova segnali espliciti.
         if _is_official_x_item(item):
+            official_text = item.title.casefold()
+
+            match_markers = (
+                "match day",
+                "matchday",
+                "partita",
+                "formazione",
+                "convocati",
+                "calcio d'inizio",
+                "diretta streaming",
+            )
+
             generic_social = (
                 "tanti auguri",
                 "buon compleanno",
                 "happy birthday",
+                "è arrivato a perth",
+                "arrivato a perth",
             )
-            if any(x in item.title.casefold() for x in generic_social):
+
+            if any(x in official_text for x in match_markers):
+                category = "⚽ PARTITA"
+            elif any(x in official_text for x in generic_social):
                 category = "📰 PALERMO NEWS"
 
 
