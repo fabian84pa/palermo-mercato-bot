@@ -23,67 +23,6 @@ MIN_QUALITY_SCORE = 30
 
 
 
-
-def _clean_x_display_text(text: str) -> str:
-    import re
-    if not text:
-        return text
-    kept = []
-    for line in text.splitlines():
-        s = line.strip()
-        if re.fullmatch(r"\d+\s*[mh]", s, flags=re.I):
-            continue
-        if re.fullmatch(r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}", s, flags=re.I):
-            continue
-        kept.append(line)
-    return "\n".join(kept).strip()
-
-
-def _deal_tokens(item):
-    import re
-    text = f"{item.title} {item.summary or ''}".casefold()
-    text = re.sub(r"@\w+", " ", text)
-    text = re.sub(r"[^a-zà-ÿ0-9]+", " ", text)
-    stop = {"palermo","calcio","calciomercato","mercato","della","delle","degli",
-            "dell","sono","questo","questa","anche","with","from","that","this",
-            "the","and","for","per","con","del","dei","gli","una","uno"}
-    return {w for w in text.split() if len(w) >= 4 and w not in stop}
-
-
-def _same_deal(a, b):
-    ta, tb = _deal_tokens(a), _deal_tokens(b)
-    if not ta or not tb:
-        return False
-    common = ta & tb
-    overlap = len(common) / max(1, min(len(ta), len(tb)))
-    return len(common) >= 2 and overlap >= 0.35
-
-
-def _source_rank(item):
-    source = (item.source or "").casefold()
-    if source == "x calciomercato":
-        return 0
-    if "palermo" in source:
-        return 3
-    if "di marzio" in source:
-        return 2
-    return 1
-
-
-def _deduplicate_same_deals(items):
-    selected = []
-    for item in items:
-        match = next((i for i, old in enumerate(selected) if _same_deal(item, old)), None)
-        if match is None:
-            selected.append(item)
-        elif _source_rank(item) > _source_rank(selected[match]):
-            print(f"Notizia simile sostituita: {selected[match].title} -> {item.title}")
-            selected[match] = item
-        else:
-            print(f"Notizia simile ignorata: {item.title}")
-    return selected
-
-
 def main():
 
 
@@ -142,9 +81,6 @@ def main():
             item.summary = translator.translate(
                 item.summary
             )
-
-            item.title = _clean_x_display_text(item.title)
-            item.summary = _clean_x_display_text(item.summary)
 
 
 
@@ -242,8 +178,6 @@ def main():
 
 
 
-    quality_news = _deduplicate_same_deals(quality_news)
-
     quality_news.sort(
 
         key=lambda item:
@@ -287,7 +221,13 @@ def main():
 
 
 
-        if player:
+        market_categories = (
+            "🟢 UFFICIALE",
+            "🟠 TRATTATIVA AVANZATA",
+            "🟡 RUMOR",
+        )
+
+        if player and category in market_categories:
 
             player_text = (
 
@@ -347,7 +287,9 @@ def main():
 
 
 
-        if any(
+        is_market = category in market_categories
+
+        if is_market and any(
 
             word in title_lower
 
@@ -368,7 +310,7 @@ def main():
 
             header = (
 
-                "🟣 <b>PALERMO CALCIOMERCATO</b>"
+                "🟣 <b>PALERMO LIVE</b>"
 
             )
 
