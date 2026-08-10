@@ -9,7 +9,7 @@ from providers.di_marzio_provider import DiMarzioProvider
 from providers.palermo_fc_provider import PalermoFCProvider
 from providers.x_provider import XProvider
 
-from telegram_sender import send_message
+from telegram_sender import send_message, send_photo
 
 from database import (
     load_seen_items,
@@ -20,6 +20,22 @@ from database import (
 
 
 MIN_QUALITY_SCORE = 30
+
+
+
+def _has_meaningful_text(text: str) -> bool:
+    """True se il testo contiene abbastanza caratteri alfanumerici da avere senso da solo."""
+    import re
+    cleaned = re.sub(r"https?://\S+", " ", text or "")
+    alnum = re.findall(r"[A-Za-zÀ-ÿ0-9]", cleaned)
+    return len(alnum) >= 4
+
+
+def _is_official_x_item(item) -> bool:
+    return (
+        item.source == "X Calciomercato"
+        and "x-Palermofficial-" in item.id
+    )
 
 
 
@@ -127,6 +143,14 @@ def main():
 
     for item in new_news:
 
+        if (
+            _is_official_x_item(item)
+            and not item.image_url
+            and not _has_meaningful_text(item.title)
+        ):
+            print(f"Scartato post Palermo senza foto/testo utile: {item.title}")
+            mark_as_seen(item.id, seen_items)
+            continue
 
         score = get_quality_score(
 
@@ -206,6 +230,18 @@ def main():
             item.source
 
         )
+
+        # I post social generici dell'account ufficiale non sono automaticamente
+        # "UFFICIALE" di mercato. Manteniamo invece partita/infortuni/mercato
+        # quando il classifier trova segnali espliciti.
+        if _is_official_x_item(item):
+            generic_social = (
+                "tanti auguri",
+                "buon compleanno",
+                "happy birthday",
+            )
+            if any(x in item.title.casefold() for x in generic_social):
+                category = "📰 PALERMO NEWS"
 
 
 
@@ -338,11 +374,22 @@ def main():
 
 
 
-        send_message(
+        if item.image_url:
 
-            message
+            sent = send_photo(
+                item.image_url,
+                message
+            )
 
-        )
+            if not sent:
+                print("Invio foto fallito, fallback a messaggio testuale.")
+                send_message(message)
+
+        else:
+
+            send_message(
+                message
+            )
 
 
 
