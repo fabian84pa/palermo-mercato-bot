@@ -334,10 +334,19 @@ class XProvider(Provider):
 
 
 
+            image_url = ""
+
+            # Foto originale del tweet (se presente).
+            # Evita avatar/profile images: X usa tweetPhoto per i media del post.
+            photo = article.locator('[data-testid="tweetPhoto"] img')
+            if photo.count() > 0:
+                image_url = photo.first.get_attribute("src") or ""
+
             return (
                 text,
                 link,
-                published
+                published,
+                image_url
             )
 
 
@@ -398,7 +407,7 @@ class XProvider(Provider):
 
 
 
-                text, link, published = post
+                text, link, published, image_url = post
 
 
 
@@ -427,7 +436,8 @@ class XProvider(Provider):
                     (
                         text,
                         link,
-                        published
+                        published,
+                        image_url
                     )
                 )
 
@@ -522,7 +532,7 @@ class XProvider(Provider):
         seen = set()
 
         for post in posts:
-            text, link, published = post
+            text, link, published, image_url = post
             key = link or self.normalize_text(text)
 
             if key in seen:
@@ -655,7 +665,8 @@ class XProvider(Provider):
                     for (
                         text,
                         link,
-                        published
+                        published,
+                        image_url
                     ) in posts:
 
 
@@ -714,7 +725,9 @@ class XProvider(Provider):
 
                                 published=published,
 
-                                summary=text
+                                summary=text,
+
+                                image_url=image_url
 
                             )
 
