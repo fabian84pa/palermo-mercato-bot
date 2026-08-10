@@ -16,3 +16,4 @@ class NewsItem:
     source: str
     published: str
     summary: str = ""
+    image_url: str = ""
