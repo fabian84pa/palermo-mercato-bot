@@ -256,9 +256,10 @@ def main():
             )
             match_markers = (
                 "match day", "matchday", "partita", "formazione",
-                "convocati", "convocato", "calcio d'inizio",
-                "diretta streaming", "full time", "finisce",
-                "risultato", "vince", "vittoria", "sconfitta",
+                "convocati", "convocato", "calcio d'inizio", "kick off",
+                "kick-off", "half time", "half-time", "intervallo",
+                "sostituzione", "diretta streaming", "full time",
+                "finisce", "risultato", "vince", "vittoria", "sconfitta",
                 "pareggio", "finale", "amichevole",
             )
 
