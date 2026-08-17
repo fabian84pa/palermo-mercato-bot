@@ -5,14 +5,15 @@ def classify_news(title: str, source: str = "") -> str:
     injury = (
         "infortunio", "infortunato", "infortunati", "indisponibile",
         "indisponibili", "lesione", "problema muscolare", "problema fisico",
-        "recupero", "injury", "injured", "ruled out",
+        "injury", "injured", "ruled out", "out per infortunio",
     )
     match = (
         "probabile formazione", "formazione", "formazioni", "convocati",
         "convocato", "match day", "matchday", "partita", "contro il palermo",
         "palermo-", "-palermo", "coppa italia", "calcio d'inizio",
         "prepartita", "post partita", "post-partita", "risultato",
-        "amichevole", "starting xi", "line-up", "lineup",
+        "amichevole", "starting xi", "line-up", "lineup", "full time",
+        "finisce", "vince", "vittoria", "sconfitta", "pareggio", "finale",
     )
     official = (
         "ufficiale", "annuncia", "annunciato", "ha firmato", "firmato",
