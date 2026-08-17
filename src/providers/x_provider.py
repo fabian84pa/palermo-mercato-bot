@@ -177,17 +177,48 @@ class XProvider(Provider):
 
 
     def is_market_palermo_context(self, text):
-        """Accetta solo tweet con riferimento esplicito al Palermo."""
+        """Accetta solo contenuti chiaramente riferibili al Palermo FC."""
         normalized = text.casefold()
-        palermo_markers = (
-            "palermo",
-            "palermo fc",
-            "@palermofficial",
-            "rosanero",
-            "rosaneri",
-        )
-        return any(marker in normalized for marker in palermo_markers)
 
+        # Falsi positivi noti: "Palermo" come persona/agenzia e non come club.
+        false_positive_patterns = (
+            "ciro palermo",
+            "palermo agency",
+            "palermo's agent",
+            "palermo agency cifra",
+            "cifra account",
+        )
+        if any(pattern in normalized for pattern in false_positive_patterns):
+            return False
+
+        explicit_club_markers = (
+            "@palermofficial",
+            "#palermo",
+            "#palermofc",
+            "#rosanero",
+            "#rosaneri",
+            "palermo fc",
+            "palermo f.c.",
+            "palermo calcio",
+        )
+        if any(marker in normalized for marker in explicit_club_markers):
+            return True
+
+        # "Palermo" semplice è valido quando è chiaramente usato in un
+        # contesto calcistico/di trasferimento e non come nome proprio.
+        transfer_context = (
+            "dal palermo", "del palermo", "al palermo", "alla palermo",
+            "a palermo", "per il palermo", "per palermo",
+            "from palermo", "to palermo", "palermo interested",
+            "palermo wants", "palermo target", "palermo are",
+            "palermo is", "palermo ha", "palermo vuole",
+            "palermo valuta", "palermo cerca", "palermo tratta",
+            "palermo pensa", "palermo lavora",
+        )
+        if "palermo" in normalized and any(x in normalized for x in transfer_context):
+            return True
+
+        return False
 
     def is_market_post_official(self, text):
         """
@@ -336,28 +367,18 @@ class XProvider(Provider):
 
             image_url = ""
 
-            # Foto originale del tweet (se presente).
-            # Evita avatar/profile images: X usa tweetPhoto per i media del post.
             photo = article.locator('[data-testid="tweetPhoto"] img')
             if photo.count() > 0:
                 image_url = photo.first.get_attribute("src") or ""
 
-            # Debug mirato + fallback: X può cambiare il wrapper delle immagini.
-            # Per i tweet Palermo controlliamo anche tutte le immagini pbs.twimg.com/media.
-            if "@Palermofficial" in text or "Palermo F.C." in text or "Palermo FC" in text:
+            # Fallback per layout X differenti.
+            if not image_url:
                 all_imgs = article.locator("img")
-                print(f"MEDIA DEBUG @Palermofficial - img trovate: {all_imgs.count()}")
                 for i in range(all_imgs.count()):
                     src = all_imgs.nth(i).get_attribute("src") or ""
                     if "pbs.twimg.com/media/" in src:
-                        print(f"MEDIA DEBUG candidate: {src}")
-                        if not image_url:
-                            image_url = src
-
-                print(
-                    "MEDIA DEBUG scelta:",
-                    image_url if image_url else "NESSUNA FOTO"
-                )
+                        image_url = src
+                        break
 
             return (
                 text,
@@ -578,10 +599,19 @@ class XProvider(Provider):
             text = re.sub(pattern, "", text)
         return text.strip()
 
-    def clean_x_display_text(self, text):
-        """Rimuove timestamp e contatori X isolati, non i numeri nelle frasi."""
+    def clean_x_display_text(self, text, source=""):
+        """Pulisce il testo X eliminando intestazioni dell'account e contatori."""
         if not text:
             return ""
+
+        source_headers = {
+            "FabrizioRomano": ("Fabrizio Romano", "@FabrizioRomano"),
+            "MatteMoretto": ("Matteo Moretto", "@MatteMoretto"),
+            "DiMarzio": ("Gianluca Di Marzio", "@DiMarzio"),
+            "NicoSchira": ("Nicolò Schira", "Nico Schira", "@NicoSchira"),
+            "Palermofficial": ("Palermo F.C.", "Palermo FC", "@Palermofficial"),
+        }
+        headers = {x.casefold() for x in source_headers.get(source, ())}
 
         cleaned = []
         counter_re = re.compile(r"^\s*\d+(?:[.,]\d+)?[KMB]?\s*$", re.I)
@@ -595,9 +625,19 @@ class XProvider(Provider):
             stripped = line.strip()
             if not stripped:
                 continue
+            low = stripped.casefold()
+
+            if low in headers:
+                continue
+
             if time_re.fullmatch(stripped) or counter_re.fullmatch(stripped):
                 continue
-            cleaned.append(line)
+
+            # Header dell'account che può comparire in fallback article.inner_text().
+            if stripped.startswith("@") and low in headers:
+                continue
+
+            cleaned.append(stripped)
 
         return "\n".join(cleaned).strip()
 
@@ -688,7 +728,7 @@ class XProvider(Provider):
 
 
                         
-                        text = self.clean_x_display_text(text)
+                        text = self.clean_x_display_text(text, source)
 
                         print(
                             "\n--- POST ---"
@@ -734,7 +774,7 @@ class XProvider(Provider):
 
                                 id=item_id,
 
-                                title=text[:120],
+                                title=text,
 
                                 link=link,
 
