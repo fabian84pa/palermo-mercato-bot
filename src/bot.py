@@ -38,6 +38,22 @@ def _is_official_x_item(item) -> bool:
     )
 
 
+def _summary_is_redundant(title: str, summary: str) -> bool:
+    import re
+
+    t = re.sub(r"\\s+", " ", (title or "").casefold()).strip()
+    s = re.sub(r"\\s+", " ", (summary or "").casefold()).strip()
+
+    if not t or not s:
+        return True
+
+    return t == s or t in s or s in t
+
+
+def _is_palermo_official_post(item) -> bool:
+    return _is_official_x_item(item)
+
+
 
 def main():
 
@@ -224,55 +240,39 @@ def main():
 
 
         category = classify_news(
-
             item.title,
-
             item.source
-
         )
 
-        # I post social generici dell'account ufficiale non sono automaticamente
-        # "UFFICIALE" di mercato. Manteniamo invece partita/infortuni/mercato
-        # quando il classifier trova segnali espliciti.
-        if _is_official_x_item(item):
+        # @Palermofficial è una comunicazione societaria.
+        # Partite e infortuni mantengono la loro categoria specifica;
+        # gli altri post ufficiali restano UFFICIALE.
+        if _is_palermo_official_post(item):
             official_text = item.title.casefold()
 
+            injury_markers = (
+                "infortunio", "infortunato", "infortunati",
+                "indisponibile", "lesione", "injury", "injured",
+            )
             match_markers = (
-                "match day",
-                "matchday",
-                "partita",
-                "formazione",
-                "convocati",
-                "calcio d'inizio",
-                "diretta streaming",
+                "match day", "matchday", "partita", "formazione",
+                "convocati", "convocato", "calcio d'inizio",
+                "diretta streaming", "full time", "finisce",
+                "risultato", "vince", "vittoria", "sconfitta",
+                "pareggio", "finale", "amichevole",
             )
 
-            generic_social = (
-                "tanti auguri",
-                "buon compleanno",
-                "happy birthday",
-                "è arrivato a perth",
-                "arrivato a perth",
-            )
-
-            if any(x in official_text for x in match_markers):
+            if any(x in official_text for x in injury_markers):
+                category = "🚑 INFORTUNI"
+            elif any(x in official_text for x in match_markers):
                 category = "⚽ PARTITA"
-            elif any(x in official_text for x in generic_social):
-                category = "📰 PALERMO NEWS"
+            else:
+                category = "🟢 UFFICIALE"
 
 
-
-        player = format_player(
-
-            item.title
-
-        )
-
-
+        player = format_player(item.title)
 
         player_text = ""
-
-
 
         market_categories = (
             "🟢 UFFICIALE",
@@ -281,37 +281,32 @@ def main():
         )
 
         if player and category in market_categories:
-
-            player_text = (
-
-                f"👤 <b>Giocatore:</b> {player}\n\n"
-
-            )
-
+            names = [x.strip() for x in player.split(",") if x.strip()]
+            if len(names) > 1:
+                player_text = (
+                    f"👥 <b>Giocatori:</b> {', '.join(names)}\\n\\n"
+                )
+            else:
+                player_text = (
+                    f"👤 <b>Giocatore:</b> {player}\\n\\n"
+                )
 
 
         summary_text = ""
 
-
-
-        if item.summary:
-
-
+        if (
+            item.summary
+            and item.source != "X Calciomercato"
+            and not _summary_is_redundant(item.title, item.summary)
+        ):
             short_summary = item.summary[:220]
 
-
             if len(item.summary) > 220:
-
                 short_summary += "..."
 
-
-
             summary_text = (
-
-                f"📝 <i>{short_summary}</i>\n\n"
-
+                f"📝 <i>{short_summary}</i>\\n\\n"
             )
-
 
 
         breaking_words = (
