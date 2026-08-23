@@ -1,11 +1,9 @@
 from pathlib import Path
-
-# VERSIONE PALERMO SEARCH X - insider + keyword Palermo
-
 import hashlib
 import json
+import os
 import re
-from urllib.parse import quote_plus
+from urllib.parse import quote
 
 from playwright.sync_api import Locator, Page, sync_playwright
 
@@ -27,31 +25,88 @@ class XProvider(Provider):
         "data/palermo_keywords.json"
     )
 
-    MAX_POSTS_PER_SOURCE = 50
-
-    ALLOWED_INSIDERS = (
-        "MatteMoretto",
-        "DiMarzio",
-        "FabrizioRomano",
-        "NicoSchira",
-        "Palermofficial",
+    # Profilo Chromium persistente dedicato al bot.
+    # NON usare il profilo personale di Chrome.
+    X_PROFILE_DIR = Path(
+        os.getenv(
+            "X_PROFILE_DIR",
+            "data/x_browser_profile"
+        )
     )
 
-    SEARCH_TERMS = (
-        "Palermo",
-        "Palermo FC",
+    # Prima esecuzione:
+    # X_HEADLESS=false
+    #
+    # Dopo aver effettuato il login:
+    # X_HEADLESS=true
+    X_HEADLESS = (
+        os.getenv(
+            "X_HEADLESS",
+            "true"
+        ).lower()
+        not in (
+            "0",
+            "false",
+            "no",
+        )
+    )
+
+    MAX_POSTS_PER_SOURCE = 50
+
+    SEARCH_QUERIES = {
+        "MatteMoretto": [
+            "Palermo",
+            "rosanero",
+            "Almena",
+            "Osti",
+            "Inzaghi",
+            "Strefezza",
+            "Pohjanpalo",
+        ],
+
+        "FabrizioRomano": [
+            "Palermo",
+            "rosanero",
+            "Palermo FC",
+        ],
+
+        "DiMarzio": [
+            "Palermo",
+            "rosanero",
+            "Palermo FC",
+        ],
+
+        "NicoSchira": [
+            "Palermo",
+            "rosanero",
+            "Palermo FC",
+        ],
+    }
+
+    # Termini utilizzati per identificare il contesto Palermo.
+    PALERMO_CONTEXT = (
+        "palermo",
+        "palermo fc",
+        "palermofficial",
         "rosanero",
         "rosaneri",
-        "aquile",
+        "almena",
+        "al-qadisiyya",
+        "al-qadisiyah",
+        "al qadisiyya",
+        "osti",
+        "inzaghi",
+        "strefezza",
+        "pohjanpalo",
     )
 
     @property
     def name(self):
         return "X Calciomercato"
 
-    # ---------------------------------------------------------
+    # ==========================================================
     # KEYWORDS
-    # ---------------------------------------------------------
+    # ==========================================================
 
     def load_keywords(self):
 
@@ -77,9 +132,9 @@ class XProvider(Provider):
 
             return ()
 
-    # ---------------------------------------------------------
+    # ==========================================================
     # NORMALIZZAZIONE
-    # ---------------------------------------------------------
+    # ==========================================================
 
     def normalize_text(
         self,
@@ -108,9 +163,9 @@ class XProvider(Provider):
 
         return text.strip()
 
-    # ---------------------------------------------------------
+    # ==========================================================
     # ID
-    # ---------------------------------------------------------
+    # ==========================================================
 
     def generate_id(
         self,
@@ -146,46 +201,36 @@ class XProvider(Provider):
             f"{digest[:16]}"
         )
 
-    # ---------------------------------------------------------
+    # ==========================================================
     # CONTESTO PALERMO
-    # ---------------------------------------------------------
+    # ==========================================================
 
     def is_market_palermo_context(
         self,
         text
     ):
 
-        context_words = (
-            "palermo",
-            "palerm",
-            "rosanero",
-            "almena",
-            "al-qadisiyya",
-            "al-qadisiyah",
-            "al qadisiyya",
-            "osti",
-            "inzaghi",
-            "strefezza",
-            "pohjanpalo",
-        )
-
-        normalized = text.casefold()
+        normalized = (
+            text or ""
+        ).casefold()
 
         return any(
             word in normalized
-            for word in context_words
+            for word in self.PALERMO_CONTEXT
         )
 
-    # ---------------------------------------------------------
-    # PALERMO OFFICIAL
-    # ---------------------------------------------------------
+    # ==========================================================
+    # FILTRO PALERMO OFFICIAL
+    # ==========================================================
 
     def is_market_post_official(
         self,
         text
     ):
 
-        normalized = text.casefold()
+        normalized = (
+            text or ""
+        ).casefold()
 
         excluded = (
             "match day",
@@ -236,9 +281,9 @@ class XProvider(Provider):
             for word in market_words
         )
 
-    # ---------------------------------------------------------
+    # ==========================================================
     # RILEVANZA
-    # ---------------------------------------------------------
+    # ==========================================================
 
     def is_relevant(
         self,
@@ -248,8 +293,10 @@ class XProvider(Provider):
 
         if source == "Palermofficial":
 
-            result = self.is_market_post_official(
-                text
+            result = (
+                self.is_market_post_official(
+                    text
+                )
             )
 
             print(
@@ -263,95 +310,9 @@ class XProvider(Provider):
             text
         )
 
-    # ---------------------------------------------------------
-    # ESTRAZIONE IMMAGINE
-    # ---------------------------------------------------------
-
-    def extract_image(
-        self,
-        article: Locator
-    ):
-
-        try:
-
-            # Metodo preferito: immagine allegata al tweet.
-            tweet_photo = article.locator(
-                '[data-testid="tweetPhoto"] img'
-            )
-
-            if tweet_photo.count() > 0:
-
-                for i in range(
-                    min(
-                        tweet_photo.count(),
-                        5
-                    )
-                ):
-
-                    src = (
-                        tweet_photo.nth(i)
-                        .get_attribute("src")
-                    )
-
-                    if src and src.startswith(
-                        "http"
-                    ):
-
-                        return src
-
-            # Fallback: immagini dentro l'articolo.
-            images = article.locator(
-                "img"
-            )
-
-            for i in range(
-                min(
-                    images.count(),
-                    10
-                )
-            ):
-
-                image = images.nth(i)
-
-                src = image.get_attribute(
-                    "src"
-                )
-
-                if not src:
-                    continue
-
-                if not src.startswith(
-                    "http"
-                ):
-                    continue
-
-                alt = (
-                    image.get_attribute(
-                        "alt"
-                    )
-                    or ""
-                ).casefold()
-
-                # Evita avatar/profilo quando possibile.
-                if (
-                    "profile" in alt
-                    or "avatar" in alt
-                ):
-                    continue
-
-                return src
-
-        except Exception as e:
-
-            print(
-                f"Errore estrazione immagine: {e}"
-            )
-
-        return ""
-
-    # ---------------------------------------------------------
-    # ESTRAZIONE TWEET
-    # ---------------------------------------------------------
+    # ==========================================================
+    # ESTRAZIONE POST
+    # ==========================================================
 
     def extract_post(
         self,
@@ -362,27 +323,21 @@ class XProvider(Provider):
 
             text = ""
 
-            # Metodo principale
             tweet_box = article.locator(
                 '[data-testid="tweetText"]'
             )
 
             if tweet_box.count() > 0:
 
-                text = tweet_box.inner_text()
+                text = tweet_box.first.inner_text()
 
             else:
 
-                # Fallback nuovo layout X
                 text = article.inner_text()
 
             if not text.strip():
 
                 return None
-
-            # -------------------------------------------------
-            # DATA / LINK
-            # -------------------------------------------------
 
             time_element = article.locator(
                 "time"
@@ -394,19 +349,39 @@ class XProvider(Provider):
             if time_element.count() > 0:
 
                 published = (
-                    time_element.get_attribute(
+                    time_element.first.get_attribute(
                         "datetime"
                     )
                     or ""
                 )
 
-                parent = time_element.locator(
-                    "xpath=.."
+                # X normalmente mette il link
+                # del post vicino al tag <time>.
+                parent = (
+                    time_element.first.locator(
+                        "xpath=.."
+                    )
                 )
 
                 href = parent.get_attribute(
                     "href"
                 )
+
+                if not href:
+
+                    # Fallback: cerca un link
+                    # /status/ dentro l'article.
+                    status_links = article.locator(
+                        'a[href*="/status/"]'
+                    )
+
+                    if status_links.count() > 0:
+
+                        href = (
+                            status_links.first.get_attribute(
+                                "href"
+                            )
+                        )
 
                 if href:
 
@@ -416,26 +391,17 @@ class XProvider(Provider):
 
                         link = href
 
-                    else:
+                    elif href.startswith("/"):
 
                         link = (
                             "https://x.com"
                             + href
                         )
 
-            # -------------------------------------------------
-            # IMMAGINE
-            # -------------------------------------------------
-
-            image_url = self.extract_image(
-                article
-            )
-
             return (
-                text,
+                text.strip(),
                 link,
-                published,
-                image_url
+                published
             )
 
         except Exception as e:
@@ -446,9 +412,105 @@ class XProvider(Provider):
 
             return None
 
-    # ---------------------------------------------------------
-    # RACCOLTA TIMELINE
-    # ---------------------------------------------------------
+    # ==========================================================
+    # DIAGNOSTICA PAGINA X
+    # ==========================================================
+
+    def diagnose_page(
+        self,
+        page: Page,
+        context=""
+    ):
+
+        try:
+
+            current_url = page.url
+
+            title = page.title()
+
+            body_text = page.locator(
+                "body"
+            ).inner_text(
+                timeout=5000
+            )
+
+            body_lower = (
+                body_text or ""
+            ).casefold()
+
+            print(
+                "\n--- DIAGNOSTICA X ---"
+            )
+
+            print(
+                f"Contesto: {context}"
+            )
+
+            print(
+                f"URL: {current_url}"
+            )
+
+            print(
+                f"Titolo: {title}"
+            )
+
+            if (
+                "accedi" in body_lower
+                or "sign in" in body_lower
+                or "log in" in body_lower
+            ):
+
+                print(
+                    "ATTENZIONE: X sembra richiedere "
+                    "l'accesso."
+                )
+
+            if (
+                "non esiste" in body_lower
+                or "doesn't exist" in body_lower
+                or "page doesn't exist" in body_lower
+            ):
+
+                print(
+                    "ATTENZIONE: X segnala "
+                    "pagina inesistente."
+                )
+
+            if (
+                "something went wrong"
+                in body_lower
+                or "qualcosa è andato storto"
+                in body_lower
+            ):
+
+                print(
+                    "ATTENZIONE: X segnala "
+                    "un errore di caricamento."
+                )
+
+            if (
+                "post" in body_lower
+                or "posts" in body_lower
+            ):
+
+                print(
+                    "La pagina contiene testo "
+                    "relativo ai post."
+                )
+
+            print(
+                "--- FINE DIAGNOSTICA ---"
+            )
+
+        except Exception as e:
+
+            print(
+                f"Errore diagnostica X: {e}"
+            )
+
+    # ==========================================================
+    # RACCOLTA PROFILO
+    # ==========================================================
 
     def collect_posts(
         self,
@@ -460,6 +522,8 @@ class XProvider(Provider):
 
         already_seen = set()
 
+        empty_rounds = 0
+
         for scroll in range(12):
 
             articles = page.locator(
@@ -469,9 +533,17 @@ class XProvider(Provider):
             count = articles.count()
 
             print(
-                f"Scroll {scroll + 1} - "
-                f"articoli: {count}"
+                f"Scroll {scroll + 1} "
+                f"- articoli: {count}"
             )
+
+            if count == 0:
+
+                empty_rounds += 1
+
+            else:
+
+                empty_rounds = 0
 
             for i in range(count):
 
@@ -483,12 +555,7 @@ class XProvider(Provider):
 
                     continue
 
-                (
-                    text,
-                    link,
-                    published,
-                    image_url
-                ) = post
+                text, link, published = post
 
                 unique = (
                     link
@@ -509,8 +576,7 @@ class XProvider(Provider):
                     (
                         text,
                         link,
-                        published,
-                        image_url
+                        published
                     )
                 )
 
@@ -528,6 +594,13 @@ class XProvider(Provider):
 
                 break
 
+            # Se per tre cicli consecutivi
+            # X non mostra nemmeno un article,
+            # non ha senso continuare a scrollare.
+            if empty_rounds >= 3:
+
+                break
+
             page.mouse.wheel(
                 0,
                 6000
@@ -542,11 +615,18 @@ class XProvider(Provider):
             f"{len(collected)}"
         )
 
+        if not collected:
+
+            self.diagnose_page(
+                page,
+                f"profilo @{source}"
+            )
+
         return collected
 
-    # ---------------------------------------------------------
-    # RICERCA X MIRATA
-    # ---------------------------------------------------------
+    # ==========================================================
+    # RICERCA X
+    # ==========================================================
 
     def search_x_posts(
         self,
@@ -559,14 +639,18 @@ class XProvider(Provider):
 
         try:
 
-            # Codifica corretta della query X.
-            url_query = quote_plus(
-                query
+            full_query = (
+                f"from:{source} {query}"
+            )
+
+            encoded_query = quote(
+                full_query,
+                safe=""
             )
 
             url = (
                 "https://x.com/search"
-                f"?q={url_query}"
+                f"?q={encoded_query}"
                 "&f=live"
                 "&src=typed_query"
             )
@@ -582,8 +666,23 @@ class XProvider(Provider):
             )
 
             page.wait_for_timeout(
-                6000
+                8000
             )
+
+            # Attende eventualmente il caricamento
+            # dinamico degli article.
+            try:
+
+                page.locator(
+                    "article"
+                ).first.wait_for(
+                    state="visible",
+                    timeout=12000
+                )
+
+            except Exception:
+
+                pass
 
             articles = page.locator(
                 "article"
@@ -595,8 +694,18 @@ class XProvider(Provider):
                 f"Search tweet trovati: {count}"
             )
 
+            if count == 0:
+
+                self.diagnose_page(
+                    page,
+                    f"search @{source} - {query}"
+                )
+
             for i in range(
-                min(count, 20)
+                min(
+                    count,
+                    20
+                )
             ):
 
                 post = self.extract_post(
@@ -618,9 +727,9 @@ class XProvider(Provider):
 
         return results
 
-    # ---------------------------------------------------------
-    # DEDUPLICAZIONE POST
-    # ---------------------------------------------------------
+    # ==========================================================
+    # DEDUPLICAZIONE
+    # ==========================================================
 
     def merge_posts(
         self,
@@ -633,8 +742,7 @@ class XProvider(Provider):
 
         for post in posts:
 
-            text = post[0]
-            link = post[1]
+            text, link, published = post
 
             key = (
                 link
@@ -657,204 +765,373 @@ class XProvider(Provider):
 
         return merged
 
-    # ---------------------------------------------------------
-    # CONTROLLO INSIDER
-    # ---------------------------------------------------------
+    # ==========================================================
+    # CONTROLLO SESSIONE X
+    # ==========================================================
 
-    def is_allowed_insider(
+    def check_x_session(
         self,
-        text
+        page
     ):
 
-        return any(
-            insider.casefold()
-            in text.casefold()
-            for insider
-            in self.ALLOWED_INSIDERS
-        )
+        try:
 
-    # ---------------------------------------------------------
-    # QUERY MIRATE
-    # ---------------------------------------------------------
-
-    def get_search_queries(
-        self,
-        source
-    ):
-
-        queries = []
-
-        # Prima scelta:
-        # cerchiamo direttamente i post dell'account
-        # che parlano del Palermo.
-        queries.append(
-            f"from:{source} Palermo"
-        )
-
-        # Seconda ricerca per intercettare
-        # formulazioni con "rosanero".
-        queries.append(
-            f"from:{source} rosanero"
-        )
-
-        # Per account insider possiamo aggiungere
-        # Palermo FC.
-        if source != "Palermofficial":
-
-            queries.append(
-                f"from:{source} \"Palermo FC\""
+            page.goto(
+                "https://x.com/home",
+                wait_until="domcontentloaded",
+                timeout=60000
             )
 
-        return queries
+            page.wait_for_timeout(
+                5000
+            )
 
-    # ---------------------------------------------------------
+            url = page.url
+
+            body = page.locator(
+                "body"
+            ).inner_text(
+                timeout=5000
+            )
+
+            body_lower = (
+                body or ""
+            ).casefold()
+
+            print(
+                "\n===================="
+            )
+
+            print(
+                "CONTROLLO SESSIONE X"
+            )
+
+            print(
+                f"URL sessione: {url}"
+            )
+
+            if (
+                "/login" in url
+                or "/i/flow/login" in url
+                or "accedi" in body_lower
+                or "sign in" in body_lower
+                or "log in" in body_lower
+            ):
+
+                print(
+                    "SESSIONE X NON AUTENTICATA."
+                )
+
+                print(
+                    "Per la prima configurazione "
+                    "esegui il bot con X_HEADLESS=false "
+                    "e accedi a X nel browser che si apre."
+                )
+
+                print(
+                    "Dopo il login, chiudi il browser "
+                    "e riesegui il bot con X_HEADLESS=true."
+                )
+
+                return False
+
+            print(
+                "Sessione X disponibile."
+            )
+
+            return True
+
+        except Exception as e:
+
+            print(
+                f"Errore controllo sessione X: {e}"
+            )
+
+            return False
+
+    # ==========================================================
     # FETCH
-    # ---------------------------------------------------------
+    # ==========================================================
 
     def fetch(self):
 
         items = []
 
+        self.X_PROFILE_DIR.mkdir(
+            parents=True,
+            exist_ok=True
+        )
+
+        print(
+            "\n===================="
+        )
+
+        print(
+            "X PROVIDER"
+        )
+
+        print(
+            f"Profilo X: {self.X_PROFILE_DIR}"
+        )
+
+        print(
+            f"Headless: {self.X_HEADLESS}"
+        )
+
         with sync_playwright() as p:
 
-            browser = p.chromium.launch(
-                headless=True
-            )
+            context = None
 
-            page = browser.new_page(
-                viewport={
-                    "width": 1280,
-                    "height": 1800
-                }
-            )
+            try:
 
-            for source in self.SOURCES:
-
-                print(
-                    "\n===================="
+                context = (
+                    p.chromium
+                    .launch_persistent_context(
+                        user_data_dir=str(
+                            self.X_PROFILE_DIR
+                        ),
+                        headless=self.X_HEADLESS,
+                        viewport={
+                            "width": 1280,
+                            "height": 1800
+                        },
+                        locale="it-IT",
+                        timezone_id="Europe/Rome",
+                        args=[
+                            "--disable-blink-features=AutomationControlled",
+                        ],
+                    )
                 )
 
-                print(
-                    f"CONTROLLO X: @{source}"
+                # Usa una pagina già presente,
+                # oppure ne crea una nuova.
+                if context.pages:
+
+                    page = context.pages[0]
+
+                else:
+
+                    page = context.new_page()
+
+                # --------------------------------------------------
+                # CONTROLLO SESSIONE
+                # --------------------------------------------------
+
+                session_ok = (
+                    self.check_x_session(
+                        page
+                    )
                 )
 
-                try:
+                if not session_ok:
 
-                    # -------------------------------------------------
-                    # TIMELINE ACCOUNT
-                    # -------------------------------------------------
+                    # Se siamo in modalità non-headless,
+                    # lasciamo tempo all'utente di effettuare
+                    # il login manualmente.
+                    if not self.X_HEADLESS:
 
-                    page.goto(
-                        f"https://x.com/{source}",
-                        wait_until="domcontentloaded",
-                        timeout=60000
+                        print(
+                            "\nATTENDO IL LOGIN X..."
+                        )
+
+                        print(
+                            "Accedi a X nella finestra "
+                            "del browser."
+                        )
+
+                        print(
+                            "Hai 120 secondi."
+                        )
+
+                        try:
+
+                            page.wait_for_timeout(
+                                120000
+                            )
+
+                        except Exception:
+
+                            pass
+
+                        session_ok = (
+                            self.check_x_session(
+                                page
+                            )
+                        )
+
+                    if not session_ok:
+
+                        print(
+                            "\nRaccolta X interrotta: "
+                            "sessione non disponibile."
+                        )
+
+                        return items
+
+                # --------------------------------------------------
+                # RACCOLTA ACCOUNT
+                # --------------------------------------------------
+
+                for source in self.SOURCES:
+
+                    print(
+                        "\n===================="
                     )
 
-                    page.wait_for_timeout(
-                        6000
+                    print(
+                        f"CONTROLLO X: @{source}"
                     )
 
-                    posts = self.collect_posts(
-                        page,
-                        source
-                    )
+                    try:
 
-                    # -------------------------------------------------
-                    # RICERCHE MIRATE
-                    # -------------------------------------------------
+                        page.goto(
+                            f"https://x.com/{source}",
+                            wait_until="domcontentloaded",
+                            timeout=60000
+                        )
 
-                    if source in self.ALLOWED_INSIDERS:
+                        page.wait_for_timeout(
+                            8000
+                        )
 
-                        search_queries = (
-                            self.get_search_queries(
+                        # Attesa dinamica.
+                        try:
+
+                            page.locator(
+                                "article"
+                            ).first.wait_for(
+                                state="visible",
+                                timeout=12000
+                            )
+
+                        except Exception:
+
+                            pass
+
+                        posts = (
+                            self.collect_posts(
+                                page,
                                 source
                             )
                         )
 
-                        for query in search_queries:
+                        # --------------------------------------------------
+                        # RICERCHE SPECIFICHE
+                        # --------------------------------------------------
 
-                            posts.extend(
-                                self.search_x_posts(
-                                    page,
+                        if (
+                            source
+                            in self.SEARCH_QUERIES
+                        ):
+
+                            for query in (
+                                self.SEARCH_QUERIES[
+                                    source
+                                ]
+                            ):
+
+                                posts.extend(
+                                    self.search_x_posts(
+                                        page,
+                                        source,
+                                        query
+                                    )
+                                )
+
+                        posts = (
+                            self.merge_posts(
+                                posts
+                            )
+                        )
+
+                        print(
+                            f"Post totali dopo dedup "
+                            f"@{source}: "
+                            f"{len(posts)}"
+                        )
+
+                        # --------------------------------------------------
+                        # FILTRO E CREAZIONE NEWS
+                        # --------------------------------------------------
+
+                        for (
+                            text,
+                            link,
+                            published
+                        ) in posts:
+
+                            print(
+                                "\n--- POST ---"
+                            )
+
+                            print(
+                                text[:400]
+                            )
+
+                            if not self.is_relevant(
+                                text,
+                                source
+                            ):
+
+                                print(
+                                    "Scartato"
+                                )
+
+                                continue
+
+                            item_id = (
+                                self.generate_id(
                                     source,
-                                    query
+                                    text,
+                                    link
                                 )
                             )
 
-                    # -------------------------------------------------
-                    # DEDUPLICAZIONE
-                    # -------------------------------------------------
-
-                    posts = self.merge_posts(
-                        posts
-                    )
-
-                    print(
-                        f"Post totali dopo dedup "
-                        f"@{source}: {len(posts)}"
-                    )
-
-                    # -------------------------------------------------
-                    # PROCESSAMENTO
-                    # -------------------------------------------------
-
-                    for post in posts:
-
-                        (
-                            text,
-                            link,
-                            published,
-                            image_url
-                        ) = post
-
-                        print(
-                            "\n--- POST ---"
-                        )
-
-                        print(
-                            text[:400]
-                        )
-
-                        if not self.is_relevant(
-                            text,
-                            source
-                        ):
-
                             print(
-                                "Scartato"
+                                f"ID GENERATO: "
+                                f"{item_id}"
                             )
 
-                            continue
+                            items.append(
+                                NewsItem(
+                                    id=item_id,
+                                    title=text[:120],
+                                    link=link,
+                                    source=self.name,
+                                    published=published,
+                                    summary=text
+                                )
+                            )
 
-                        item_id = self.generate_id(
-                            source,
-                            text,
-                            link
-                        )
+                    except Exception as e:
 
                         print(
-                            f"ID GENERATO: "
-                            f"{item_id}"
+                            f"Errore @{source}: {e}"
                         )
 
-                        items.append(
-                            NewsItem(
-                                id=item_id,
-                                title=text[:120],
-                                link=link,
-                                source=self.name,
-                                published=published,
-                                summary=text,
-                                image_url=image_url
-                            )
-                        )
+            finally:
 
-                except Exception as e:
+                if context:
 
-                    print(
-                        f"Errore @{source}: {e}"
-                    )
+                    try:
 
-            browser.close()
+                        context.close()
+
+                    except Exception:
+
+                        pass
+
+        print(
+            "\n===================="
+        )
+
+        print(
+            f"X PROVIDER: "
+            f"{len(items)} notizie valide"
+        )
+
+        print(
+            "===================="
+        )
 
         return items
