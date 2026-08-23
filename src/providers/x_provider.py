@@ -1,9 +1,11 @@
-# VERSIONE PALERMO v9 - raccolta profili estesa\nfrom pathlib import Path
-# VERSIONE PALERMO SEARCH X - insider + keyword Palermo
 from pathlib import Path
+
+# VERSIONE PALERMO SEARCH X - insider + keyword Palermo
+
 import hashlib
 import json
 import re
+from urllib.parse import quote_plus
 
 from playwright.sync_api import Locator, Page, sync_playwright
 
@@ -11,18 +13,7 @@ from core.news import NewsItem
 from core.provider import Provider
 
 
-
 class XProvider(Provider):
-
-    INSIDER_NAMES_TO_IGNORE = (
-        "Matteo Moretto",
-        "Fabrizio Romano",
-        "Nico Schira",
-        "Gianluca Di Marzio",
-    )
-
-
-
 
     SOURCES = (
         "FabrizioRomano",
@@ -32,11 +23,9 @@ class XProvider(Provider):
         "Palermofficial",
     )
 
-
     KEYWORDS_FILE = Path(
         "data/palermo_keywords.json"
     )
-
 
     MAX_POSTS_PER_SOURCE = 50
 
@@ -48,29 +37,21 @@ class XProvider(Provider):
         "Palermofficial",
     )
 
-
-
     SEARCH_TERMS = (
         "Palermo",
         "Palermo FC",
         "rosanero",
         "rosaneri",
         "aquile",
-        "Almena",
-        "Osti",
-        "Inzaghi",
-        "Strefezza",
-        "Pohjanpalo",
     )
-
-
 
     @property
     def name(self):
-
         return "X Calciomercato"
 
-
+    # ---------------------------------------------------------
+    # KEYWORDS
+    # ---------------------------------------------------------
 
     def load_keywords(self):
 
@@ -84,7 +65,6 @@ class XProvider(Provider):
 
                 data = json.load(file)
 
-
             return tuple(
                 keyword.casefold()
                 for keyword in data.get(
@@ -93,12 +73,13 @@ class XProvider(Provider):
                 )
             )
 
-
         except Exception:
 
             return ()
 
-
+    # ---------------------------------------------------------
+    # NORMALIZZAZIONE
+    # ---------------------------------------------------------
 
     def normalize_text(
         self,
@@ -107,13 +88,11 @@ class XProvider(Provider):
 
         text = text.casefold()
 
-
         text = re.sub(
             r"\b\d+\s*(m|h|d|w)\b",
             "",
             text
         )
-
 
         text = re.sub(
             r"\b\d+[km]?\b",
@@ -121,17 +100,17 @@ class XProvider(Provider):
             text
         )
 
-
         text = re.sub(
             r"\s+",
             " ",
             text
         )
 
-
         return text.strip()
 
-
+    # ---------------------------------------------------------
+    # ID
+    # ---------------------------------------------------------
 
     def generate_id(
         self,
@@ -140,12 +119,10 @@ class XProvider(Provider):
         link=""
     ):
 
-
         match = re.search(
             r"/status/(\d+)",
             link
         )
-
 
         if match:
 
@@ -154,12 +131,9 @@ class XProvider(Provider):
                 f"{match.group(1)}"
             )
 
-
-
         clean = self.normalize_text(
             text
         )
-
 
         digest = hashlib.sha256(
             f"{source}-{clean}".encode(
@@ -167,85 +141,104 @@ class XProvider(Provider):
             )
         ).hexdigest()
 
-
-
         return (
             f"x-{source}-"
             f"{digest[:16]}"
         )
 
+    # ---------------------------------------------------------
+    # CONTESTO PALERMO
+    # ---------------------------------------------------------
 
+    def is_market_palermo_context(
+        self,
+        text
+    ):
 
-    def is_market_palermo_context(self, text):
-        """Accetta solo contenuti chiaramente riferibili al Palermo FC."""
+        context_words = (
+            "palermo",
+            "palerm",
+            "rosanero",
+            "almena",
+            "al-qadisiyya",
+            "al-qadisiyah",
+            "al qadisiyya",
+            "osti",
+            "inzaghi",
+            "strefezza",
+            "pohjanpalo",
+        )
+
         normalized = text.casefold()
 
-        # Falsi positivi noti: "Palermo" come persona/agenzia e non come club.
-        false_positive_patterns = (
-            "ciro palermo",
-            "palermo agency",
-            "palermo's agent",
-            "palermo agency cifra",
-            "cifra account",
+        return any(
+            word in normalized
+            for word in context_words
         )
-        if any(pattern in normalized for pattern in false_positive_patterns):
-            return False
 
-        explicit_club_markers = (
-            "@palermofficial",
-            "#palermo",
-            "#palermofc",
-            "#rosanero",
-            "#rosaneri",
-            "palermo fc",
-            "palermo f.c.",
-            "palermo calcio",
-        )
-        if any(marker in normalized for marker in explicit_club_markers):
-            return True
+    # ---------------------------------------------------------
+    # PALERMO OFFICIAL
+    # ---------------------------------------------------------
 
-        # "Palermo" semplice è valido quando è chiaramente usato in un
-        # contesto calcistico/di trasferimento e non come nome proprio.
-        transfer_context = (
-            "dal palermo", "del palermo", "al palermo", "alla palermo",
-            "a palermo", "per il palermo", "per palermo",
-            "from palermo", "to palermo", "palermo interested",
-            "palermo wants", "palermo target", "palermo are",
-            "palermo is", "palermo ha", "palermo vuole",
-            "palermo valuta", "palermo cerca", "palermo tratta",
-            "palermo pensa", "palermo lavora",
-        )
-        if "palermo" in normalized and any(x in normalized for x in transfer_context):
-            return True
+    def is_market_post_official(
+        self,
+        text
+    ):
 
-        return False
-
-    def is_market_post_official(self, text):
-        """
-        Palermo Official: accetta contenuti sportivi e di mercato
-        relativi alla prima squadra. Esclude contenuti commerciali,
-        community e academy.
-        """
         normalized = text.casefold()
 
         excluded = (
-            "biglietto",
-            "biglietti",
-            "ticket",
-            "store",
-            "shop",
-            "community",
-            "sponsor",
-            "marketing",
-            "academy",
-            "junior",
-            "codice etico",
+            "match day",
+            "trophy",
+            "allenamento",
+            "training",
+            "partita",
+            "gara",
+            "diretta",
+            "streaming",
+            "live",
+            "amichevole",
+            "risveglio",
+            "perth",
         )
 
-        if any(word in normalized for word in excluded):
+        if any(
+            word in normalized
+            for word in excluded
+        ):
+
             return False
 
-        return True
+        market_words = (
+            "benvenuto",
+            "welcome",
+            "ufficiale",
+            "annuncia",
+            "annunciato",
+            "firma",
+            "firmato",
+            "contratto",
+            "rinnovo",
+            "prolungamento",
+            "acquisto",
+            "acquista",
+            "ingaggiato",
+            "ceduto",
+            "cessione",
+            "prestito",
+            "transfer",
+            "signing",
+            "signed",
+        )
+
+        return any(
+            word in normalized
+            for word in market_words
+        )
+
+    # ---------------------------------------------------------
+    # RILEVANZA
+    # ---------------------------------------------------------
 
     def is_relevant(
         self,
@@ -253,29 +246,112 @@ class XProvider(Provider):
         source
     ):
 
-
         if source == "Palermofficial":
 
             result = self.is_market_post_official(
                 text
             )
 
-
             print(
                 "Palermo Official mercato:",
                 result
             )
 
-
             return result
-
-
 
         return self.is_market_palermo_context(
             text
         )
 
+    # ---------------------------------------------------------
+    # ESTRAZIONE IMMAGINE
+    # ---------------------------------------------------------
 
+    def extract_image(
+        self,
+        article: Locator
+    ):
+
+        try:
+
+            # Metodo preferito: immagine allegata al tweet.
+            tweet_photo = article.locator(
+                '[data-testid="tweetPhoto"] img'
+            )
+
+            if tweet_photo.count() > 0:
+
+                for i in range(
+                    min(
+                        tweet_photo.count(),
+                        5
+                    )
+                ):
+
+                    src = (
+                        tweet_photo.nth(i)
+                        .get_attribute("src")
+                    )
+
+                    if src and src.startswith(
+                        "http"
+                    ):
+
+                        return src
+
+            # Fallback: immagini dentro l'articolo.
+            images = article.locator(
+                "img"
+            )
+
+            for i in range(
+                min(
+                    images.count(),
+                    10
+                )
+            ):
+
+                image = images.nth(i)
+
+                src = image.get_attribute(
+                    "src"
+                )
+
+                if not src:
+                    continue
+
+                if not src.startswith(
+                    "http"
+                ):
+                    continue
+
+                alt = (
+                    image.get_attribute(
+                        "alt"
+                    )
+                    or ""
+                ).casefold()
+
+                # Evita avatar/profilo quando possibile.
+                if (
+                    "profile" in alt
+                    or "avatar" in alt
+                ):
+                    continue
+
+                return src
+
+        except Exception as e:
+
+            print(
+                f"Errore estrazione immagine: {e}"
+            )
+
+        return ""
+
+    # ---------------------------------------------------------
+    # ESTRAZIONE TWEET
+    # ---------------------------------------------------------
 
     def extract_post(
         self,
@@ -286,47 +362,36 @@ class XProvider(Provider):
 
             text = ""
 
-
             # Metodo principale
-
             tweet_box = article.locator(
                 '[data-testid="tweetText"]'
             )
-
 
             if tweet_box.count() > 0:
 
                 text = tweet_box.inner_text()
 
-
-
             else:
 
                 # Fallback nuovo layout X
-
                 text = article.inner_text()
-
-
 
             if not text.strip():
 
                 return None
 
-
+            # -------------------------------------------------
+            # DATA / LINK
+            # -------------------------------------------------
 
             time_element = article.locator(
                 "time"
             )
 
-
             link = ""
-
             published = ""
 
-
-
             if time_element.count() > 0:
-
 
                 published = (
                     time_element.get_attribute(
@@ -335,26 +400,21 @@ class XProvider(Provider):
                     or ""
                 )
 
-
                 parent = time_element.locator(
                     "xpath=.."
                 )
-
 
                 href = parent.get_attribute(
                     "href"
                 )
 
-
                 if href:
-
 
                     if href.startswith(
                         "http"
                     ):
 
                         link = href
-
 
                     else:
 
@@ -363,22 +423,13 @@ class XProvider(Provider):
                             + href
                         )
 
+            # -------------------------------------------------
+            # IMMAGINE
+            # -------------------------------------------------
 
-
-            image_url = ""
-
-            photo = article.locator('[data-testid="tweetPhoto"] img')
-            if photo.count() > 0:
-                image_url = photo.first.get_attribute("src") or ""
-
-            # Fallback per layout X differenti.
-            if not image_url:
-                all_imgs = article.locator("img")
-                for i in range(all_imgs.count()):
-                    src = all_imgs.nth(i).get_attribute("src") or ""
-                    if "pbs.twimg.com/media/" in src:
-                        image_url = src
-                        break
+            image_url = self.extract_image(
+                article
+            )
 
             return (
                 text,
@@ -386,8 +437,6 @@ class XProvider(Provider):
                 published,
                 image_url
             )
-
-
 
         except Exception as e:
 
@@ -397,7 +446,9 @@ class XProvider(Provider):
 
             return None
 
-
+    # ---------------------------------------------------------
+    # RACCOLTA TIMELINE
+    # ---------------------------------------------------------
 
     def collect_posts(
         self,
@@ -405,49 +456,39 @@ class XProvider(Provider):
         source
     ):
 
-
         collected = []
 
         already_seen = set()
 
-
-
-        for scroll in range(50):
-
+        for scroll in range(12):
 
             articles = page.locator(
                 "article"
             )
 
-
             count = articles.count()
 
-
-
             print(
-                f"Scroll {scroll + 1} - articoli: {count}"
+                f"Scroll {scroll + 1} - "
+                f"articoli: {count}"
             )
 
-
-
             for i in range(count):
-
 
                 post = self.extract_post(
                     articles.nth(i)
                 )
 
-
-
                 if not post:
 
                     continue
 
-
-
-                text, link, published, image_url = post
-
-
+                (
+                    text,
+                    link,
+                    published,
+                    image_url
+                ) = post
 
                 unique = (
                     link
@@ -456,19 +497,13 @@ class XProvider(Provider):
                     )
                 )
 
-
-
                 if unique in already_seen:
 
                     continue
 
-
-
                 already_seen.add(
                     unique
                 )
-
-
 
                 collected.append(
                     (
@@ -479,53 +514,66 @@ class XProvider(Provider):
                     )
                 )
 
-
-
-                if len(collected) >= self.MAX_POSTS_PER_SOURCE:
+                if (
+                    len(collected)
+                    >= self.MAX_POSTS_PER_SOURCE
+                ):
 
                     break
 
-
-
-            if len(collected) >= self.MAX_POSTS_PER_SOURCE:
+            if (
+                len(collected)
+                >= self.MAX_POSTS_PER_SOURCE
+            ):
 
                 break
-
-
 
             page.mouse.wheel(
                 0,
                 6000
             )
 
-
             page.wait_for_timeout(
                 2500
             )
 
-
-
         print(
-            f"Totale raccolti @{source}: {len(collected)}"
+            f"Totale raccolti @{source}: "
+            f"{len(collected)}"
         )
-
-
 
         return collected
 
+    # ---------------------------------------------------------
+    # RICERCA X MIRATA
+    # ---------------------------------------------------------
 
+    def search_x_posts(
+        self,
+        page: Page,
+        source,
+        query
+    ):
 
-
-
-
-    def search_x_posts(self, page: Page, source, query):
         results = []
 
         try:
-            url_query = f"{query}"
-            url = f"https://x.com/search?q={url_query}&f=live&src=typed_query"
 
-            print(f"CONTROLLO SEARCH X: {url}")
+            # Codifica corretta della query X.
+            url_query = quote_plus(
+                query
+            )
+
+            url = (
+                "https://x.com/search"
+                f"?q={url_query}"
+                "&f=live"
+                "&src=typed_query"
+            )
+
+            print(
+                f"CONTROLLO SEARCH X: {url}"
+            )
 
             page.goto(
                 url,
@@ -533,130 +581,145 @@ class XProvider(Provider):
                 timeout=60000
             )
 
-            page.wait_for_timeout(6000)
+            page.wait_for_timeout(
+                6000
+            )
 
-            print("===== SEARCH X DISABLED =====")
-            print("URL:", page.url)
-            print("TITLE:", page.title())
+            articles = page.locator(
+                "article"
+            )
 
-            try:
-                body_preview = page.locator("body").inner_text(timeout=10000)
-                print("BODY PREVIEW:")
-                print(body_preview[:1000])
-            except Exception as e:
-                print("Errore lettura body:", e)
-
-            print("==========================")
-
-            articles = page.locator("article")
             count = articles.count()
 
-            print(f"Search tweet trovati: {count}")
+            print(
+                f"Search tweet trovati: {count}"
+            )
 
-            for i in range(min(count, 10)):
-                post = self.extract_post(articles.nth(i))
+            for i in range(
+                min(count, 20)
+            ):
+
+                post = self.extract_post(
+                    articles.nth(i)
+                )
 
                 if post:
-                    results.append(post)
+
+                    results.append(
+                        post
+                    )
 
         except Exception as e:
-            print(f"Errore ricerca X {source} {query}: {e}")
+
+            print(
+                f"Errore ricerca X "
+                f"{source} {query}: {e}"
+            )
 
         return results
 
+    # ---------------------------------------------------------
+    # DEDUPLICAZIONE POST
+    # ---------------------------------------------------------
 
-    def merge_posts(self, posts):
+    def merge_posts(
+        self,
+        posts
+    ):
+
         merged = []
+
         seen = set()
 
         for post in posts:
-            text, link, published, image_url = post
-            key = link or self.normalize_text(text)
+
+            text = post[0]
+            link = post[1]
+
+            key = (
+                link
+                or self.normalize_text(
+                    text
+                )
+            )
 
             if key in seen:
+
                 continue
 
-            seen.add(key)
-            merged.append(post)
+            seen.add(
+                key
+            )
+
+            merged.append(
+                post
+            )
 
         return merged
 
+    # ---------------------------------------------------------
+    # CONTROLLO INSIDER
+    # ---------------------------------------------------------
 
+    def is_allowed_insider(
+        self,
+        text
+    ):
 
-    def is_allowed_insider(self, text):
         return any(
-            insider.casefold() in text.casefold()
-            for insider in self.ALLOWED_INSIDERS
+            insider.casefold()
+            in text.casefold()
+            for insider
+            in self.ALLOWED_INSIDERS
         )
 
+    # ---------------------------------------------------------
+    # QUERY MIRATE
+    # ---------------------------------------------------------
 
-    def clean_x_timestamp(self, text):
-        patterns = [
-            r"(?mi)^\s*\d+\s*[mhdw]\s*$",
-            r"(?mi)^\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s*$",
-        ]
-        for pattern in patterns:
-            text = re.sub(pattern, "", text)
-        return text.strip()
+    def get_search_queries(
+        self,
+        source
+    ):
 
-    def clean_x_display_text(self, text, source=""):
-        """Pulisce il testo X eliminando intestazioni dell'account e contatori."""
-        if not text:
-            return ""
+        queries = []
 
-        source_headers = {
-            "FabrizioRomano": ("Fabrizio Romano", "@FabrizioRomano"),
-            "MatteMoretto": ("Matteo Moretto", "@MatteMoretto"),
-            "DiMarzio": ("Gianluca Di Marzio", "@DiMarzio"),
-            "NicoSchira": ("Nicolò Schira", "Nico Schira", "@NicoSchira"),
-            "Palermofficial": ("Palermo F.C.", "Palermo FC", "@Palermofficial"),
-        }
-        headers = {x.casefold() for x in source_headers.get(source, ())}
-
-        cleaned = []
-        counter_re = re.compile(r"^\s*\d+(?:[.,]\d+)?[KMB]?\s*$", re.I)
-        time_re = re.compile(
-            r"^\s*(?:\d+\s*[mhdw]|"
-            r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2})\s*$",
-            re.I,
+        # Prima scelta:
+        # cerchiamo direttamente i post dell'account
+        # che parlano del Palermo.
+        queries.append(
+            f"from:{source} Palermo"
         )
 
-        for line in text.splitlines():
-            stripped = line.strip()
-            if not stripped:
-                continue
-            low = stripped.casefold()
+        # Seconda ricerca per intercettare
+        # formulazioni con "rosanero".
+        queries.append(
+            f"from:{source} rosanero"
+        )
 
-            if low in headers:
-                continue
+        # Per account insider possiamo aggiungere
+        # Palermo FC.
+        if source != "Palermofficial":
 
-            if time_re.fullmatch(stripped) or counter_re.fullmatch(stripped):
-                continue
+            queries.append(
+                f"from:{source} \"Palermo FC\""
+            )
 
-            # Header dell'account che può comparire in fallback article.inner_text().
-            if stripped.startswith("@") and low in headers:
-                continue
+        return queries
 
-            cleaned.append(stripped)
-
-        return "\n".join(cleaned).strip()
+    # ---------------------------------------------------------
+    # FETCH
+    # ---------------------------------------------------------
 
     def fetch(self):
 
-
         items = []
 
-
-
         with sync_playwright() as p:
-
-
 
             browser = p.chromium.launch(
                 headless=True
             )
-
-
 
             page = browser.new_page(
                 viewport={
@@ -665,24 +728,21 @@ class XProvider(Provider):
                 }
             )
 
-
-
             for source in self.SOURCES:
-
 
                 print(
                     "\n===================="
                 )
 
-
                 print(
                     f"CONTROLLO X: @{source}"
                 )
 
-
-
                 try:
 
+                    # -------------------------------------------------
+                    # TIMELINE ACCOUNT
+                    # -------------------------------------------------
 
                     page.goto(
                         f"https://x.com/{source}",
@@ -690,22 +750,28 @@ class XProvider(Provider):
                         timeout=60000
                     )
 
-
                     page.wait_for_timeout(
                         6000
                     )
-
-
 
                     posts = self.collect_posts(
                         page,
                         source
                     )
 
-                    # Ricerca X globale per parole chiave Palermo
+                    # -------------------------------------------------
+                    # RICERCHE MIRATE
+                    # -------------------------------------------------
+
                     if source in self.ALLOWED_INSIDERS:
 
-                        for query in []:
+                        search_queries = (
+                            self.get_search_queries(
+                                source
+                            )
+                        )
+
+                        for query in search_queries:
 
                             posts.extend(
                                 self.search_x_posts(
@@ -715,31 +781,39 @@ class XProvider(Provider):
                                 )
                             )
 
-                    posts = self.merge_posts(posts)
+                    # -------------------------------------------------
+                    # DEDUPLICAZIONE
+                    # -------------------------------------------------
 
+                    posts = self.merge_posts(
+                        posts
+                    )
 
+                    print(
+                        f"Post totali dopo dedup "
+                        f"@{source}: {len(posts)}"
+                    )
 
-                    for (
-                        text,
-                        link,
-                        published,
-                        image_url
-                    ) in posts:
+                    # -------------------------------------------------
+                    # PROCESSAMENTO
+                    # -------------------------------------------------
 
+                    for post in posts:
 
-                        
-                        text = self.clean_x_display_text(text, source)
+                        (
+                            text,
+                            link,
+                            published,
+                            image_url
+                        ) = post
 
                         print(
                             "\n--- POST ---"
                         )
 
-
                         print(
                             text[:400]
                         )
-
-
 
                         if not self.is_relevant(
                             text,
@@ -752,45 +826,28 @@ class XProvider(Provider):
 
                             continue
 
-
-
                         item_id = self.generate_id(
                             source,
                             text,
                             link
                         )
 
-
-
                         print(
-                            f"ID GENERATO: {item_id}"
+                            f"ID GENERATO: "
+                            f"{item_id}"
                         )
-
-
 
                         items.append(
-
                             NewsItem(
-
                                 id=item_id,
-
-                                title=text,
-
+                                title=text[:120],
                                 link=link,
-
                                 source=self.name,
-
                                 published=published,
-
                                 summary=text,
-
                                 image_url=image_url
-
                             )
-
                         )
-
-
 
                 except Exception as e:
 
@@ -798,10 +855,6 @@ class XProvider(Provider):
                         f"Errore @{source}: {e}"
                     )
 
-
-
             browser.close()
-
-
 
         return items
