@@ -1,46 +1,157 @@
 def classify_news(title: str, source: str = "") -> str:
     """Classifica una notizia Palermo: mercato, partita, infortuni o news."""
+
     text = (title or "").casefold()
 
     injury = (
-        "infortunio", "infortunato", "infortunati", "indisponibile",
-        "indisponibili", "lesione", "problema muscolare", "problema fisico",
-        "injury", "injured", "ruled out", "out per infortunio",
-    )
-    match = (
-        "probabile formazione", "formazione", "formazioni", "convocati",
-        "convocato", "match day", "matchday", "partita", "contro il palermo",
-        "palermo-", "-palermo", "coppa italia", "calcio d'inizio",
-        "prepartita", "post partita", "post-partita", "risultato",
-        "amichevole", "starting xi", "line-up", "lineup", "full time",
-        "finisce", "vince", "vittoria", "sconfitta", "pareggio", "finale",
-    )
-    official = (
-        "ufficiale", "annuncia", "annunciato", "ha firmato", "firmato",
-        "rinnovo", "prolungamento", "nuovo acquisto", "nuovo giocatore",
-        "official", "confirmed", "signed", "signing", "contract signed",
-    )
-    advanced = (
-        "visite mediche", "accordo raggiunto", "accordo", "affare fatto",
-        "operazione chiusa", "chiuso", "fatta", "vicino", "intesa",
-        "agreement", "done deal", "medical", "here we go", "close to",
-        "set to join",
-    )
-    rumor = (
-        "obiettivo", "trattativa", "contatti", "offerta", "interesse",
-        "interessato", "piace", "sondaggio", "idea", "valuta",
-        "target", "talks", "in talks", "interest", "interested",
-        "proposal", "bid", "offer", "monitoring",
+        "infortunio",
+        "infortunato",
+        "infortunati",
+        "indisponibile",
+        "indisponibili",
+        "lesione",
+        "problema muscolare",
+        "problema fisico",
+        "injury",
+        "injured",
+        "ruled out",
+        "out per infortunio",
     )
 
-    if any(k in text for k in injury):
+    match = (
+        "probabile formazione",
+        "formazione",
+        "formazioni",
+        "convocati",
+        "convocato",
+        "match day",
+        "matchday",
+        "partita",
+        "contro il palermo",
+        "palermo-",
+        "-palermo",
+        "coppa italia",
+        "calcio d'inizio",
+        "prepartita",
+        "post partita",
+        "post-partita",
+        "risultato",
+        "amichevole",
+        "starting xi",
+        "line-up",
+        "lineup",
+        "full time",
+        "half time",
+        "half-time",
+        "intervallo",
+        "kick off",
+        "kick-off",
+        "inizia",
+        "inizio",
+        "sostituzione",
+        "sub ",
+        "sub\n",
+        "minuti di recupero",
+        "tempo di recupero",
+        "finisce",
+        "vince",
+        "vittoria",
+        "sconfitta",
+        "pareggio",
+        "finale",
+    )
+
+    official = (
+        "ufficiale",
+        "annuncia",
+        "annunciato",
+        "ha firmato",
+        "firmato",
+        "rinnovo",
+        "prolungamento",
+        "nuovo acquisto",
+        "nuovo giocatore",
+        "official",
+        "confirmed",
+        "signed",
+        "signing",
+        "contract signed",
+    )
+
+    advanced = (
+        "visite mediche",
+        "accordo raggiunto",
+        "accordo",
+        "affare fatto",
+        "operazione chiusa",
+        "chiuso",
+        "fatta",
+        "vicino",
+        "intesa",
+        "agreement",
+        "done deal",
+        "medical",
+        "here we go",
+        "close to",
+        "set to join",
+    )
+
+    rumor = (
+        "obiettivo",
+        "trattativa",
+        "contatti",
+        "offerta",
+        "interesse",
+        "interessato",
+        "piace",
+        "sondaggio",
+        "idea",
+        "valuta",
+        "target",
+        "talks",
+        "in talks",
+        "interest",
+        "interested",
+        "proposal",
+        "bid",
+        "offer",
+        "monitoring",
+        "profili",
+        "profilo",
+        "in corsa",
+        "opzione",
+        "possibile",
+        "avanzano i profili",
+    )
+
+    if any(
+        k in text
+        for k in injury
+    ):
         return "🚑 INFORTUNI"
-    if any(k in text for k in match):
+
+    if any(
+        k in text
+        for k in match
+    ):
         return "⚽ PARTITA"
-    if any(k in text for k in official):
+
+    if any(
+        k in text
+        for k in official
+    ):
         return "🟢 UFFICIALE"
-    if any(k in text for k in advanced):
+
+    if any(
+        k in text
+        for k in advanced
+    ):
         return "🟠 TRATTATIVA AVANZATA"
-    if any(k in text for k in rumor):
+
+    if any(
+        k in text
+        for k in rumor
+    ):
         return "🟡 RUMOR"
+
     return "📰 PALERMO NEWS"
