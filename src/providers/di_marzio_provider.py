@@ -16,11 +16,26 @@ class DiMarzioProvider(Provider):
         "https://www.gianlucadimarzio.com/",
     )
 
-    KEYWORDS = (
+    # ==========================================================
+    # KEYWORDS PALERMO
+    # ==========================================================
+    #
+    # Sono divise per importanza.
+    #
+    # Palermo / rosanero = identificazione diretta.
+    # Giocatori / dirigenti = identificazione di un'operazione
+    # che può essere scritta senza nominare Palermo nel titolo.
+    #
+
+    PALERMO_KEYWORDS = (
         "palermo",
         "palermo fc",
+        "palermo calcio",
         "rosanero",
         "rosaneri",
+    )
+
+    PEOPLE_KEYWORDS = (
         "inzaghi",
         "pohjanpalo",
         "gabrielloni",
@@ -36,10 +51,50 @@ class DiMarzioProvider(Provider):
         "kostic",
     )
 
+    # ==========================================================
+    # PAROLE DA IGNORARE
+    # ==========================================================
+    #
+    # Queste parole da sole NON possono dimostrare che
+    # un articolo riguarda il Palermo.
+    #
+
+    GENERIC_WORDS = (
+        "arrivo",
+        "arriva",
+        "arrivato",
+        "arrivata",
+        "giocatore",
+        "giocatori",
+        "calciomercato",
+        "mercato",
+        "accordo",
+        "offerta",
+        "trattativa",
+        "interesse",
+        "profilo",
+        "profili",
+        "nuovo",
+        "nuova",
+        "firma",
+        "firmato",
+        "firmata",
+        "prestito",
+        "cessione",
+        "acquisto",
+        "ufficiale",
+        "visite mediche",
+    )
+
+    # ==========================================================
+    # HTTP
+    # ==========================================================
+
     HEADERS = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 "
+            "(KHTML, like Gecko) "
             "Chrome/151.0.0.0 Safari/537.36"
         ),
         "Accept-Language": (
@@ -54,11 +109,22 @@ class DiMarzioProvider(Provider):
 
     TIMEOUT = 30
 
+    # ==========================================================
+    # PROVIDER NAME
+    # ==========================================================
+
     @property
     def name(self) -> str:
         return "Gianluca Di Marzio"
 
-    def get_page(self, url: str):
+    # ==========================================================
+    # GET PAGE
+    # ==========================================================
+
+    def get_page(
+        self,
+        url: str,
+    ):
         response = requests.get(
             url,
             headers=self.HEADERS,
@@ -71,6 +137,10 @@ class DiMarzioProvider(Provider):
             response.text,
             "html.parser",
         )
+
+    # ==========================================================
+    # META
+    # ==========================================================
 
     @staticmethod
     def get_meta(
@@ -100,6 +170,82 @@ class DiMarzioProvider(Provider):
             tag.get("content")
             or ""
         ).strip()
+
+    # ==========================================================
+    # ARTICLE BODY
+    # ==========================================================
+
+    @staticmethod
+    def get_article_text(
+        soup: BeautifulSoup,
+    ) -> str:
+        """
+        Estrae il testo dell'articolo.
+
+        Serve come terzo livello di controllo quando il titolo
+        non contiene direttamente Palermo o un nome noto.
+
+        Non usiamo tutto l'HTML indiscriminatamente perché menu,
+        footer, articoli correlati e pubblicità possono contenere
+        parole che falserebbero il filtro.
+        """
+
+        selectors = (
+            "article",
+            "[itemprop='articleBody']",
+            ".article-body",
+            ".article-content",
+            ".post-content",
+            ".entry-content",
+            "main",
+        )
+
+        for selector in selectors:
+
+            nodes = soup.select(
+                selector
+            )
+
+            if not nodes:
+                continue
+
+            chunks = []
+
+            for node in nodes:
+
+                text = node.get_text(
+                    " ",
+                    strip=True,
+                )
+
+                if text:
+                    chunks.append(
+                        text
+                    )
+
+            if chunks:
+
+                return " ".join(
+                    chunks
+                )
+
+        # Fallback molto conservativo.
+        body = soup.find(
+            "body"
+        )
+
+        if body:
+
+            return body.get_text(
+                " ",
+                strip=True,
+            )
+
+        return ""
+
+    # ==========================================================
+    # ARTICLE DATA
+    # ==========================================================
 
     def get_article_data(
         self,
@@ -153,14 +299,21 @@ class DiMarzioProvider(Provider):
                         )
                         or time_tag.get_text(
                             " ",
-                            strip=True
+                            strip=True,
                         )
                     )
+
+            article_text = (
+                self.get_article_text(
+                    soup
+                )
+            )
 
             return (
                 summary,
                 image_url,
                 published,
+                article_text,
             )
 
         except Exception as e:
@@ -174,7 +327,12 @@ class DiMarzioProvider(Provider):
                 "",
                 "",
                 "",
+                "",
             )
+
+    # ==========================================================
+    # CLEAN TITLE
+    # ==========================================================
 
     @staticmethod
     def clean_title(
@@ -192,6 +350,10 @@ class DiMarzioProvider(Provider):
 
         return title.strip()
 
+    # ==========================================================
+    # VALID ARTICLE LINK
+    # ==========================================================
+
     def is_article_link(
         self,
         link: str,
@@ -202,8 +364,13 @@ class DiMarzioProvider(Provider):
         ):
             return False
 
-        if link.rstrip("/") == (
-            f"{self.BASE_URL}/calciomercato"
+        clean_link = (
+            link.rstrip("/")
+        )
+
+        if clean_link in (
+            self.BASE_URL,
+            f"{self.BASE_URL}/calciomercato",
         ):
             return False
 
@@ -225,6 +392,8 @@ class DiMarzioProvider(Provider):
             "/author/",
             "/search",
             "/login",
+            "/page/",
+            "/video/",
         )
 
         if any(
@@ -235,23 +404,160 @@ class DiMarzioProvider(Provider):
 
         return True
 
+    # ==========================================================
+    # NORMALIZE TEXT
+    # ==========================================================
+
+    @staticmethod
+    def normalize_text(
+        text: str,
+    ) -> str:
+
+        return " ".join(
+            (text or "")
+            .casefold()
+            .split()
+        )
+
+    # ==========================================================
+    # DIRECT PALERMO CHECK
+    # ==========================================================
+
+    def contains_palermo(
+        self,
+        text: str,
+    ) -> bool:
+
+        normalized = self.normalize_text(
+            text
+        )
+
+        return any(
+            keyword in normalized
+            for keyword in self.PALERMO_KEYWORDS
+        )
+
+    # ==========================================================
+    # KNOWN PLAYER CHECK
+    # ==========================================================
+
+    def contains_known_person(
+        self,
+        text: str,
+    ) -> bool:
+
+        normalized = self.normalize_text(
+            text
+        )
+
+        return any(
+            keyword in normalized
+            for keyword in self.PEOPLE_KEYWORDS
+        )
+
+    # ==========================================================
+    # PALERMO NEWS CHECK
+    # ==========================================================
+
     def is_palermo_news(
         self,
         title: str,
         summary: str = "",
+        article_text: str = "",
     ) -> bool:
+        """
+        Filtro a più livelli.
 
-        text = (
-            f"{title} {summary}"
-        ).casefold()
+        LIVELLO 1:
+        Palermo / Rosanero direttamente nel titolo.
 
-        return any(
-            keyword.casefold()
-            in text
-            for keyword in self.KEYWORDS
+        LIVELLO 2:
+        Giocatore/dirigente noto direttamente nel titolo.
+
+        LIVELLO 3:
+        Se il titolo non basta, controlliamo summary + corpo
+        dell'articolo cercando un riferimento forte al Palermo.
+
+        NON consideriamo sufficienti parole generiche come:
+        "arrivo", "accordo", "trattativa", "giocatore", ecc.
+        """
+
+        normalized_title = self.normalize_text(
+            title
         )
 
-    def fetch(self) -> list[NewsItem]:
+        normalized_summary = self.normalize_text(
+            summary
+        )
+
+        normalized_body = self.normalize_text(
+            article_text
+        )
+
+        # ------------------------------------------------------
+        # 1. PALERMO NEL TITOLO
+        # ------------------------------------------------------
+
+        if self.contains_palermo(
+            normalized_title
+        ):
+            return True
+
+        # ------------------------------------------------------
+        # 2. GIOCATORE/OBIETTIVO NOTO NEL TITOLO
+        # ------------------------------------------------------
+
+        if self.contains_known_person(
+            normalized_title
+        ):
+            return True
+
+        # ------------------------------------------------------
+        # 3. PALERMO NEL SUMMARY
+        # ------------------------------------------------------
+
+        if self.contains_palermo(
+            normalized_summary
+        ):
+            return True
+
+        # ------------------------------------------------------
+        # 4. GIOCATORE NOTO + PALERMO NEL CORPO
+        # ------------------------------------------------------
+
+        if (
+            self.contains_known_person(
+                normalized_title
+            )
+            and self.contains_palermo(
+                normalized_body
+            )
+        ):
+            return True
+
+        # ------------------------------------------------------
+        # 5. PALERMO NEL CORPO
+        # ------------------------------------------------------
+        #
+        # Richiediamo più di una semplice parola generica.
+        # Se il corpo dell'articolo parla esplicitamente del
+        # Palermo, è sufficiente.
+        #
+
+        if self.contains_palermo(
+            normalized_body
+        ):
+            return True
+
+        return False
+
+    # ==========================================================
+    # FETCH
+    # ==========================================================
+
+    def fetch(
+        self,
+    ) -> list[NewsItem]:
 
         items = []
 
@@ -339,19 +645,41 @@ class DiMarzioProvider(Provider):
                     if link in seen_links:
                         continue
 
+                    # --------------------------------------------------
+                    # RECUPERO DATI ARTICOLO
+                    # --------------------------------------------------
+
                     (
                         summary,
                         image_url,
                         published,
+                        article_text,
                     ) = self.get_article_data(
                         link
                     )
 
-                    if not self.is_palermo_news(
-                        title,
-                        summary,
-                    ):
+                    # --------------------------------------------------
+                    # FILTRO PALERMO
+                    # --------------------------------------------------
+
+                    relevant = self.is_palermo_news(
+                        title=title,
+                        summary=summary,
+                        article_text=article_text,
+                    )
+
+                    if not relevant:
+
+                        print(
+                            "Scartato non-Palermo: "
+                            f"{title}"
+                        )
+
                         continue
+
+                    # --------------------------------------------------
+                    # DEDUP URL
+                    # --------------------------------------------------
 
                     seen_links.add(
                         link
@@ -382,6 +710,17 @@ class DiMarzioProvider(Provider):
                             f"Immagine: "
                             f"{image_url}"
                         )
+
+                    if published:
+
+                        print(
+                            f"Pubblicata: "
+                            f"{published}"
+                        )
+
+                    # --------------------------------------------------
+                    # NEWS ITEM
+                    # --------------------------------------------------
 
                     items.append(
                         NewsItem(
