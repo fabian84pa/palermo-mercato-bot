@@ -49,7 +49,6 @@ SOURCE_NAMES = {
 
 
 def _clean_source_headers(text: str) -> str:
-
     lines = []
 
     for line in (text or "").splitlines():
@@ -76,9 +75,13 @@ def _clean_source_headers(text: str) -> str:
         ):
             continue
 
-        lines.append(line)
+        lines.append(
+            line
+        )
 
-    return "\n".join(lines).strip()
+    return "\n".join(
+        lines
+    ).strip()
 
 
 def clean_name(name: str) -> str:
@@ -86,7 +89,9 @@ def clean_name(name: str) -> str:
     name = re.sub(
         r"\s+",
         " ",
-        (name or "").strip(" .,:;!?-")
+        (name or "").strip(
+            " .,:;!?-"
+        ),
     )
 
     if not name:
@@ -98,27 +103,57 @@ def clean_name(name: str) -> str:
     if name.casefold() in SOURCE_NAMES:
         return ""
 
+    # Evita URL, username e stringhe tecniche.
+    if (
+        name.startswith("http://")
+        or name.startswith("https://")
+        or name.startswith("@")
+    ):
+        return ""
+
+    # Un nome deve avere almeno una lettera.
+    if not re.search(
+        r"[A-Za-zÀ-ÿ]",
+        name,
+    ):
+        return ""
+
     return name
 
 
-def extract_players(title: str) -> list[str]:
+def extract_players(
+    title: str,
+) -> list[str]:
 
-    text = _clean_source_headers(title)
+    text = _clean_source_headers(
+        title
+    )
 
     if not text:
         return []
 
     found: list[str] = []
 
-    def add(candidate: str):
+    def add(
+        candidate: str,
+    ):
 
-        candidate = clean_name(candidate)
+        candidate = clean_name(
+            candidate
+        )
 
         if not candidate:
             return
 
-        # Non è un giocatore se è chiaramente una squadra/entità comune.
-        if candidate.casefold() in {
+        candidate_lower = (
+            candidate.casefold()
+        )
+
+        # ------------------------------------------------------
+        # Squadre / entità che non sono giocatori.
+        # ------------------------------------------------------
+
+        if candidate_lower in {
             "zulte waregem",
             "al-ahli",
             "al-hilal",
@@ -127,20 +162,57 @@ def extract_players(title: str) -> list[str]:
             "juventus",
             "palermo",
             "atlético madrid",
+            "atletico madrid",
             "aston villa",
             "real madrid",
             "barcelona",
             "paris saint-germain",
+            "como",
+            "fenerbahçe",
+            "fenerbahce",
+            "inter",
+            "milan",
+            "roma",
+            "napoli",
+            "torino",
+            "bologna",
+            "sassuolo",
+            "monza",
+            "cagliari",
+            "genoa",
+            "parma",
+        }:
+            return
+
+        # Evita parole palesemente non nominali.
+        if candidate_lower in {
+            "accordo totale",
+            "affare fatto",
+            "trattativa avanzata",
+            "nuovo acquisto",
+            "nuovo giocatore",
+            "visite mediche",
+            "domani",
+            "oggi",
+            "ieri",
+            "profilo",
+            "profili",
+            "alternative",
+            "opzioni",
+            "uscita",
+            "uscite",
         }:
             return
 
         if candidate not in found:
-            found.append(candidate)
+            found.append(
+                candidate
+            )
 
-    # 1) Elenchi espliciti:
-    # - Blin
-    # - Gyasi
-    # - Brunori
+    # ==========================================================
+    # 1) ELENCHI ESPLICITI
+    # ==========================================================
+
     for line in text.splitlines():
 
         m = re.match(
@@ -148,35 +220,44 @@ def extract_players(title: str) -> list[str]:
             r"([A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]{2,}"
             r"(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]{2,})?)"
             r"\s*$",
-            line
+            line,
         )
 
         if m:
-            add(m.group(1))
+            add(
+                m.group(1)
+            )
 
-    # Se abbiamo trovato un elenco, quello è il dato più affidabile.
     if found:
         return found
 
-    # 2) Giocatore oggetto di esami/condizioni/infortunio:
-    # "esami di Joronen"
+    # ==========================================================
+    # 2) ESAMI / CONDIZIONI / INFORTUNIO
+    # ==========================================================
+
     subject = re.compile(
-        r"\b(?:esami|condizioni|infortunio|infortunio di|problemi)"
+        r"\b(?:esami|condizioni|infortunio|"
+        r"infortunio di|problemi)"
         r"\s+(?:di|del|della)\s+"
         r"([A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+"
         r"(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+)?)",
         re.I,
     )
 
-    for m in subject.finditer(text):
-        add(m.group(1))
+    for m in subject.finditer(
+        text
+    ):
+        add(
+            m.group(1)
+        )
 
-    # 3) Liste di giocatori nella stessa frase:
-    # "profili di Sportiello e Semper"
-    # "da Pinamonti a Piccoli"
-    #
-    # I cognomi singoli sono ammessi solo quando la frase
-    # contiene marcatori espliciti di giocatori/profili/opzioni.
+    if found:
+        return found
+
+    # ==========================================================
+    # 3) LISTE DI PROFILI / NOMI / OPZIONI
+    # ==========================================================
+
     list_patterns = (
 
         re.compile(
@@ -199,7 +280,9 @@ def extract_players(title: str) -> list[str]:
 
     for pattern in list_patterns:
 
-        for m in pattern.finditer(text):
+        for m in pattern.finditer(
+            text
+        ):
 
             for group in m.groups():
 
@@ -209,25 +292,33 @@ def extract_players(title: str) -> list[str]:
     if found:
         return found
 
-    # 4) Cognome singolo in frasi di mercato:
-    # "trattativa di Perin"
-    # "offerta per Perin"
-    # "interesse per Pinamonti"
+    # ==========================================================
+    # 4) COGNOME SINGOLO IN FRASE DI MERCATO
+    # ==========================================================
+
     single_market = re.compile(
-        r"\b(?:trattativa|trattativa in corso|offerta|interesse|"
-        r"accordo|cessione|acquisto|ingaggio|arrivo|prestito)"
+        r"\b(?:trattativa|trattativa in corso|"
+        r"offerta|interesse|accordo|cessione|"
+        r"acquisto|ingaggio|arrivo|prestito)"
         r"\s+(?:di|per|su)\s+"
         r"([A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]{2,})\b",
         re.I,
     )
 
-    for m in single_market.finditer(text):
-        add(m.group(1))
+    for m in single_market.finditer(
+        text
+    ):
+        add(
+            m.group(1)
+        )
 
     if found:
         return found
 
-    # 5) Cognomi collegati da "e" in contesti di mercato.
+    # ==========================================================
+    # 5) DUE COGNOMI IN CONTESTO DI MERCATO
+    # ==========================================================
+
     pair_single = re.compile(
         r"\b([A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]{2,})"
         r"\s+e\s+"
@@ -235,8 +326,8 @@ def extract_players(title: str) -> list[str]:
     )
 
     if any(
-        k in text.casefold()
-        for k in (
+        keyword in text.casefold()
+        for keyword in (
             "trattativa",
             "attacco",
             "portiere",
@@ -248,50 +339,72 @@ def extract_players(title: str) -> list[str]:
         )
     ):
 
-        for m in pair_single.finditer(text):
+        for m in pair_single.finditer(
+            text
+        ):
 
-            add(m.group(1))
-            add(m.group(2))
+            add(
+                m.group(1)
+            )
+
+            add(
+                m.group(2)
+            )
 
     if found:
         return found
 
-    # 6) Nomi composti prima di una tipica preposizione
-    # di trasferimento.
+    # ==========================================================
+    # 6) NOMI COMPOSTI PRIMA DI PREPOSIZIONI DI TRASFERIMENTO
+    # ==========================================================
+
     transfer = re.compile(
         r"\b("
         r"[A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+"
         r"(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+){1,2}"
         r")\s+"
-        r"(?:allo|alla|al|a|nel|nella|dal|dalla|verso|"
-        r"per|from|to|joins|join)\b"
+        r"(?:allo|alla|al|a|nel|nella|dal|dalla|"
+        r"verso|per|from|to|joins|join)\b"
     )
 
-    for m in transfer.finditer(text):
-        add(m.group(1))
+    for m in transfer.finditer(
+        text
+    ):
+        add(
+            m.group(1)
+        )
 
     if found:
         return found
 
-    # 7) Cognome singolo in formati tipo:
-    # "Fenerbahçe-Lukaku, accordo totale"
+    # ==========================================================
+    # 7) COGNOME DOPO TRATTINO
+    # ==========================================================
+
     single_after_hyphen = re.compile(
         r"-\s*"
         r"([A-ZÀ-Ý][A-Za-zÀ-ÿ'’]{2,})"
         r"\s*,\s*"
-        r"(?:accordo|trattativa|fatta|vicino|ufficiale|"
-        r"annuncia|arriva|firmato|deal|agreement)\b",
+        r"(?:accordo|trattativa|fatta|vicino|"
+        r"ufficiale|annuncia|arriva|firmato|"
+        r"deal|agreement)\b",
         re.I,
     )
 
-    for m in single_after_hyphen.finditer(text):
-        add(m.group(1))
+    for m in single_after_hyphen.finditer(
+        text
+    ):
+        add(
+            m.group(1)
+        )
 
     if found:
         return found
 
-    # 8) Più giocatori in una frase:
-    # "Andrea Pinamonti e Roberto Piccoli..."
+    # ==========================================================
+    # 8) DUE NOMI COMPLETI
+    # ==========================================================
+
     pair = re.compile(
         r"\b("
         r"[A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+\s+"
@@ -303,52 +416,79 @@ def extract_players(title: str) -> list[str]:
         r")\b"
     )
 
-    for m in pair.finditer(text):
+    for m in pair.finditer(
+        text
+    ):
 
-        add(m.group(1))
-        add(m.group(2))
+        add(
+            m.group(1)
+        )
+
+        add(
+            m.group(2)
+        )
 
     if found:
         return found
 
-    # 9) Cognome/nome associato a un'azione di gioco.
-    #
-    # Evita di prendere frasi casuali (es. "GIOELEEEEE")
-    # come nome del giocatore.
+    # ==========================================================
+    # 9) NOME ASSOCIATO AD AZIONE
+    # ==========================================================
+
     action = re.compile(
         r"\b("
         r"[A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]{2,}"
         r"(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]{2,})?"
         r")\s+"
-        r"(?=(?:firma|segna|sigla|realizza|sblocca|"
-        r"raddoppio|gol|rete|marcatura|scores))",
+        r"(?=(?:firma|segna|sigla|realizza|"
+        r"sblocca|raddoppio|gol|rete|marcatura|"
+        r"scores))",
         re.I,
     )
 
-    for m in action.finditer(text):
-        add(m.group(1))
+    for m in action.finditer(
+        text
+    ):
+        add(
+            m.group(1)
+        )
 
     if found:
         return found
 
-    # Nessun fallback generico:
-    # meglio non mostrare un giocatore che inventarne uno
-    # da testo, errori HTTP o frasi dei tifosi.
+    # ==========================================================
+    # NESSUN FALLBACK GENERICO
+    # ==========================================================
+
+    # Meglio non mostrare un falso giocatore.
     return []
 
 
-def extract_player(title: str) -> str:
+def extract_player(
+    title: str,
+) -> str:
 
-    players = extract_players(title)
-
-    return players[0] if players else ""
-
-
-def format_player(title: str) -> str:
-
-    players = extract_players(title)
+    players = extract_players(
+        title
+    )
 
     if not players:
         return ""
 
-    return ", ".join(players[:5])
+    return players[0]
+
+
+def format_player(
+    title: str,
+) -> str:
+
+    players = extract_players(
+        title
+    )
+
+    if not players:
+        return ""
+
+    return ", ".join(
+        players[:5]
+    )
