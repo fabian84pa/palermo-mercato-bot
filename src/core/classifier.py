@@ -1,7 +1,21 @@
 def classify_news(title: str, source: str = "") -> str:
-    """Classifica una notizia Palermo: mercato, partita, infortuni o news."""
+    """
+    Classifica una notizia Palermo.
 
-    text = (title or "").casefold()
+    Ordine:
+    1. Infortuni
+    2. Partita
+    3. Ufficiale
+    4. Trattativa avanzata
+    5. Rumor
+    6. Palermo News
+    """
+
+    text = (title or "").casefold().strip()
+
+    # ==========================================================
+    # INFORTUNI
+    # ==========================================================
 
     injury = (
         "infortunio",
@@ -12,11 +26,17 @@ def classify_news(title: str, source: str = "") -> str:
         "lesione",
         "problema muscolare",
         "problema fisico",
+        "problemi fisici",
         "injury",
         "injured",
         "ruled out",
         "out per infortunio",
+        "salta per infortunio",
     )
+
+    # ==========================================================
+    # PARTITA
+    # ==========================================================
 
     match = (
         "probabile formazione",
@@ -24,15 +44,19 @@ def classify_news(title: str, source: str = "") -> str:
         "formazioni",
         "convocati",
         "convocato",
+        "convocazione",
         "match day",
         "matchday",
         "partita",
         "contro il palermo",
+        "contro la palermo",
         "palermo-",
         "-palermo",
         "coppa italia",
         "calcio d'inizio",
+        "calcio d’inizio",
         "prepartita",
+        "pre-partita",
         "post partita",
         "post-partita",
         "risultato",
@@ -49,8 +73,6 @@ def classify_news(title: str, source: str = "") -> str:
         "inizia",
         "inizio",
         "sostituzione",
-        "sub ",
-        "sub\n",
         "minuti di recupero",
         "tempo di recupero",
         "finisce",
@@ -61,16 +83,30 @@ def classify_news(title: str, source: str = "") -> str:
         "finale",
     )
 
+    # ==========================================================
+    # UFFICIALE
+    # ==========================================================
+
     official = (
         "ufficiale",
+        "ufficialmente",
         "annuncia",
         "annunciato",
+        "annunciata",
         "ha firmato",
         "firmato",
+        "firmata",
+        "firma",
         "rinnovo",
+        "rinnovato",
+        "rinnovata",
         "prolungamento",
         "nuovo acquisto",
         "nuovo giocatore",
+        "nuova giocatrice",
+        "benvenuto",
+        "benvenuta",
+        "welcome",
         "official",
         "confirmed",
         "signed",
@@ -78,23 +114,42 @@ def classify_news(title: str, source: str = "") -> str:
         "contract signed",
     )
 
+    # ==========================================================
+    # TRATTATIVA AVANZATA
+    # ==========================================================
+
     advanced = (
         "visite mediche",
+        "visita medica",
         "accordo raggiunto",
+        "accordo totale",
         "accordo",
         "affare fatto",
         "operazione chiusa",
+        "operazione conclusa",
         "chiuso",
+        "chiusa",
         "fatta",
-        "vicino",
+        "fatto",
+        "intesa raggiunta",
         "intesa",
+        "vicino",
+        "vicina",
+        "in arrivo",
+        "arriva",
+        "arrivato",
+        "arrivata",
+        "medical",
         "agreement",
         "done deal",
-        "medical",
         "here we go",
         "close to",
         "set to join",
     )
+
+    # ==========================================================
+    # RUMOR / TRATTATIVA
+    # ==========================================================
 
     rumor = (
         "obiettivo",
@@ -102,11 +157,14 @@ def classify_news(title: str, source: str = "") -> str:
         "contatti",
         "offerta",
         "interesse",
+        "interesse concreto",
         "interessato",
+        "interessata",
         "piace",
         "sondaggio",
         "idea",
         "valuta",
+        "valutazione",
         "target",
         "talks",
         "in talks",
@@ -121,36 +179,41 @@ def classify_news(title: str, source: str = "") -> str:
         "in corsa",
         "opzione",
         "possibile",
+        "possibile arrivo",
         "avanzano i profili",
     )
 
+    # ==========================================================
+    # ORDINE DI CLASSIFICAZIONE
+    # ==========================================================
+
     if any(
-        k in text
-        for k in injury
+        keyword in text
+        for keyword in injury
     ):
         return "🚑 INFORTUNI"
 
     if any(
-        k in text
-        for k in match
+        keyword in text
+        for keyword in match
     ):
         return "⚽ PARTITA"
 
     if any(
-        k in text
-        for k in official
+        keyword in text
+        for keyword in official
     ):
         return "🟢 UFFICIALE"
 
     if any(
-        k in text
-        for k in advanced
+        keyword in text
+        for keyword in advanced
     ):
         return "🟠 TRATTATIVA AVANZATA"
 
     if any(
-        k in text
-        for k in rumor
+        keyword in text
+        for keyword in rumor
     ):
         return "🟡 RUMOR"
 
