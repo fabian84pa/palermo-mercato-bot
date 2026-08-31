@@ -16,10 +16,6 @@ class DiMarzioProvider(Provider):
         "https://www.gianlucadimarzio.com/",
     )
 
-    # ==========================================================
-    # PALERMO KEYWORDS
-    # ==========================================================
-
     PALERMO_KEYWORDS = (
         "palermo",
         "palermo fc",
@@ -44,12 +40,9 @@ class DiMarzioProvider(Provider):
         "kostic",
     )
 
-    # ==========================================================
-    # PAGINE CHE NON SONO ARTICOLI
-    # ==========================================================
-
     EXCLUDED_PATHS = (
         "/calciomercato",
+        "/caffe-di-marzio",
         "/interviste-e-storie",
         "/video",
         "/tag/",
@@ -59,10 +52,6 @@ class DiMarzioProvider(Provider):
         "/login",
         "/page/",
     )
-
-    # ==========================================================
-    # HTTP
-    # ==========================================================
 
     HEADERS = {
         "User-Agent": (
@@ -83,17 +72,9 @@ class DiMarzioProvider(Provider):
 
     TIMEOUT = 30
 
-    # ==========================================================
-    # PROVIDER
-    # ==========================================================
-
     @property
     def name(self) -> str:
         return "Gianluca Di Marzio"
-
-    # ==========================================================
-    # GET PAGE
-    # ==========================================================
 
     def get_page(
         self,
@@ -111,10 +92,6 @@ class DiMarzioProvider(Provider):
             response.text,
             "html.parser",
         )
-
-    # ==========================================================
-    # META
-    # ==========================================================
 
     @staticmethod
     def get_meta(
@@ -145,20 +122,15 @@ class DiMarzioProvider(Provider):
             or ""
         ).strip()
 
-    # ==========================================================
-    # ARTICLE TEXT
-    # ==========================================================
-
     @staticmethod
     def get_article_text(
         soup: BeautifulSoup,
     ) -> str:
         """
-        Estrae ESCLUSIVAMENTE il corpo dell'articolo.
+        Estrae esclusivamente il corpo dell'articolo.
 
-        IMPORTANTE:
-        non usiamo più <main> come fallback perché può contenere
-        menu, footer, articoli correlati e altre notizie Palermo.
+        Non utilizziamo <main> come fallback perché potrebbe
+        contenere menu, footer o articoli correlati.
         """
 
         selectors = (
@@ -199,12 +171,7 @@ class DiMarzioProvider(Provider):
                     chunks
                 )
 
-        # Nessun corpo articolo identificabile.
         return ""
-
-    # ==========================================================
-    # ARTICLE DATA
-    # ==========================================================
 
     def get_article_data(
         self,
@@ -289,10 +256,6 @@ class DiMarzioProvider(Provider):
                 "",
             )
 
-    # ==========================================================
-    # CLEAN TITLE
-    # ==========================================================
-
     @staticmethod
     def clean_title(
         title: str,
@@ -309,10 +272,6 @@ class DiMarzioProvider(Provider):
 
         return title.strip()
 
-    # ==========================================================
-    # ARTICLE LINK
-    # ==========================================================
-
     def is_article_link(
         self,
         link: str,
@@ -327,10 +286,10 @@ class DiMarzioProvider(Provider):
             link.rstrip("/")
         )
 
-        # Homepage e pagine indice.
         if clean_link in (
             self.BASE_URL,
             f"{self.BASE_URL}/calciomercato",
+            f"{self.BASE_URL}/caffe-di-marzio",
             f"{self.BASE_URL}/interviste-e-storie",
         ):
             return False
@@ -343,7 +302,6 @@ class DiMarzioProvider(Provider):
         if not path:
             return False
 
-        # Categorie / pagine tecniche.
         if any(
             part in path
             for part in self.EXCLUDED_PATHS
@@ -351,10 +309,6 @@ class DiMarzioProvider(Provider):
             return False
 
         return True
-
-    # ==========================================================
-    # NORMALIZE
-    # ==========================================================
 
     @staticmethod
     def normalize_text(
@@ -366,10 +320,6 @@ class DiMarzioProvider(Provider):
             .casefold()
             .split()
         )
-
-    # ==========================================================
-    # PALERMO
-    # ==========================================================
 
     def contains_palermo(
         self,
@@ -385,10 +335,6 @@ class DiMarzioProvider(Provider):
             for keyword in self.PALERMO_KEYWORDS
         )
 
-    # ==========================================================
-    # KNOWN PEOPLE
-    # ==========================================================
-
     def contains_known_person(
         self,
         text: str,
@@ -402,10 +348,6 @@ class DiMarzioProvider(Provider):
             keyword in normalized
             for keyword in self.PEOPLE_KEYWORDS
         )
-
-    # ==========================================================
-    # PALERMO NEWS
-    # ==========================================================
 
     def is_palermo_news(
         self,
@@ -426,37 +368,26 @@ class DiMarzioProvider(Provider):
             article_text
         )
 
-        # ------------------------------------------------------
-        # 1. PALERMO DIRETTAMENTE NEL TITOLO
-        # ------------------------------------------------------
-
+        # Palermo/Rosanero direttamente nel titolo.
         if self.contains_palermo(
             normalized_title
         ):
             return True
 
-        # ------------------------------------------------------
-        # 2. GIOCATORE / PERSONA NOTA NEL TITOLO
-        # ------------------------------------------------------
-
+        # Un giocatore/dirigente noto direttamente nel titolo.
         if self.contains_known_person(
             normalized_title
         ):
             return True
 
-        # ------------------------------------------------------
-        # 3. PALERMO NEL SUMMARY
-        # ------------------------------------------------------
-
+        # Palermo direttamente nel summary.
         if self.contains_palermo(
             normalized_summary
         ):
             return True
 
-        # ------------------------------------------------------
-        # 4. PERSONA NOTA + PALERMO NEL CORPO REALE
-        # ------------------------------------------------------
-
+        # Persona nota nel titolo + Palermo nel vero corpo
+        # dell'articolo.
         if (
             self.contains_known_person(
                 normalized_title
@@ -467,17 +398,7 @@ class DiMarzioProvider(Provider):
         ):
             return True
 
-        # ------------------------------------------------------
-        # 5. PALERMO NEL CORPO REALE
-        # ------------------------------------------------------
-        #
-        # Questo controllo viene effettuato SOLO se abbiamo
-        # trovato un vero corpo articolo.
-        #
-        # Non viene più usato <main>, quindi non può pescare
-        # Palermo da menu/articoli correlati/footer.
-        #
-
+        # Palermo nel vero corpo dell'articolo.
         if normalized_body:
 
             if self.contains_palermo(
@@ -486,10 +407,6 @@ class DiMarzioProvider(Provider):
                 return True
 
         return False
-
-    # ==========================================================
-    # FETCH
-    # ==========================================================
 
     def fetch(
         self,
