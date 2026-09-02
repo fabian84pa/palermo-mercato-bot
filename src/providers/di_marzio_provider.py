@@ -16,15 +16,11 @@ class DiMarzioProvider(Provider):
         "https://www.gianlucadimarzio.com/",
     )
 
-    PALERMO_KEYWORDS = (
+    KEYWORDS = (
         "palermo",
         "palermo fc",
-        "palermo calcio",
         "rosanero",
         "rosaneri",
-    )
-
-    PEOPLE_KEYWORDS = (
         "inzaghi",
         "pohjanpalo",
         "gabrielloni",
@@ -40,24 +36,10 @@ class DiMarzioProvider(Provider):
         "kostic",
     )
 
-    EXCLUDED_PATHS = (
-        "/calciomercato",
-        "/caffe-di-marzio",
-        "/interviste-e-storie",
-        "/video",
-        "/tag/",
-        "/categoria/",
-        "/author/",
-        "/search",
-        "/login",
-        "/page/",
-    )
-
     HEADERS = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 "
-            "(KHTML, like Gecko) "
             "Chrome/151.0.0.0 Safari/537.36"
         ),
         "Accept-Language": (
@@ -76,10 +58,7 @@ class DiMarzioProvider(Provider):
     def name(self) -> str:
         return "Gianluca Di Marzio"
 
-    def get_page(
-        self,
-        url: str,
-    ):
+    def get_page(self, url: str):
         response = requests.get(
             url,
             headers=self.HEADERS,
@@ -121,57 +100,6 @@ class DiMarzioProvider(Provider):
             tag.get("content")
             or ""
         ).strip()
-
-    @staticmethod
-    def get_article_text(
-        soup: BeautifulSoup,
-    ) -> str:
-        """
-        Estrae esclusivamente il corpo dell'articolo.
-
-        Non utilizziamo <main> come fallback perché potrebbe
-        contenere menu, footer o articoli correlati.
-        """
-
-        selectors = (
-            "article",
-            "[itemprop='articleBody']",
-            ".article-body",
-            ".article-content",
-            ".post-content",
-            ".entry-content",
-        )
-
-        for selector in selectors:
-
-            nodes = soup.select(
-                selector
-            )
-
-            if not nodes:
-                continue
-
-            chunks = []
-
-            for node in nodes:
-
-                text = node.get_text(
-                    " ",
-                    strip=True,
-                )
-
-                if text:
-                    chunks.append(
-                        text
-                    )
-
-            if chunks:
-
-                return " ".join(
-                    chunks
-                )
-
-        return ""
 
     def get_article_data(
         self,
@@ -225,21 +153,14 @@ class DiMarzioProvider(Provider):
                         )
                         or time_tag.get_text(
                             " ",
-                            strip=True,
+                            strip=True
                         )
                     )
-
-            article_text = (
-                self.get_article_text(
-                    soup
-                )
-            )
 
             return (
                 summary,
                 image_url,
                 published,
-                article_text,
             )
 
         except Exception as e:
@@ -250,7 +171,6 @@ class DiMarzioProvider(Provider):
             )
 
             return (
-                "",
                 "",
                 "",
                 "",
@@ -282,15 +202,8 @@ class DiMarzioProvider(Provider):
         ):
             return False
 
-        clean_link = (
-            link.rstrip("/")
-        )
-
-        if clean_link in (
-            self.BASE_URL,
-            f"{self.BASE_URL}/calciomercato",
-            f"{self.BASE_URL}/caffe-di-marzio",
-            f"{self.BASE_URL}/interviste-e-storie",
+        if link.rstrip("/") == (
+            f"{self.BASE_URL}/calciomercato"
         ):
             return False
 
@@ -299,118 +212,46 @@ class DiMarzioProvider(Provider):
             "",
         )
 
-        if not path:
+        if path in (
+            "",
+            "/",
+            "/calciomercato/",
+        ):
             return False
+
+        excluded_parts = (
+            "/tag/",
+            "/categoria/",
+            "/author/",
+            "/search",
+            "/login",
+        )
 
         if any(
             part in path
-            for part in self.EXCLUDED_PATHS
+            for part in excluded_parts
         ):
             return False
 
         return True
 
-    @staticmethod
-    def normalize_text(
-        text: str,
-    ) -> str:
-
-        return " ".join(
-            (text or "")
-            .casefold()
-            .split()
-        )
-
-    def contains_palermo(
-        self,
-        text: str,
-    ) -> bool:
-
-        normalized = self.normalize_text(
-            text
-        )
-
-        return any(
-            keyword in normalized
-            for keyword in self.PALERMO_KEYWORDS
-        )
-
-    def contains_known_person(
-        self,
-        text: str,
-    ) -> bool:
-
-        normalized = self.normalize_text(
-            text
-        )
-
-        return any(
-            keyword in normalized
-            for keyword in self.PEOPLE_KEYWORDS
-        )
-
     def is_palermo_news(
         self,
         title: str,
         summary: str = "",
-        article_text: str = "",
     ) -> bool:
 
-        normalized_title = self.normalize_text(
-            title
+        text = (
+            f"{title} {summary}"
+        ).casefold()
+
+        return any(
+            keyword.casefold()
+            in text
+            for keyword in self.KEYWORDS
         )
 
-        normalized_summary = self.normalize_text(
-            summary
-        )
-
-        normalized_body = self.normalize_text(
-            article_text
-        )
-
-        # Palermo/Rosanero direttamente nel titolo.
-        if self.contains_palermo(
-            normalized_title
-        ):
-            return True
-
-        # Un giocatore/dirigente noto direttamente nel titolo.
-        if self.contains_known_person(
-            normalized_title
-        ):
-            return True
-
-        # Palermo direttamente nel summary.
-        if self.contains_palermo(
-            normalized_summary
-        ):
-            return True
-
-        # Persona nota nel titolo + Palermo nel vero corpo
-        # dell'articolo.
-        if (
-            self.contains_known_person(
-                normalized_title
-            )
-            and self.contains_palermo(
-                normalized_body
-            )
-        ):
-            return True
-
-        # Palermo nel vero corpo dell'articolo.
-        if normalized_body:
-
-            if self.contains_palermo(
-                normalized_body
-            ):
-                return True
-
-        return False
-
-    def fetch(
-        self,
-    ) -> list[NewsItem]:
+    def fetch(self) -> list[NewsItem]:
 
         items = []
 
@@ -502,22 +343,14 @@ class DiMarzioProvider(Provider):
                         summary,
                         image_url,
                         published,
-                        article_text,
                     ) = self.get_article_data(
                         link
                     )
 
                     if not self.is_palermo_news(
-                        title=title,
-                        summary=summary,
-                        article_text=article_text,
+                        title,
+                        summary,
                     ):
-
-                        print(
-                            "Scartato non-Palermo: "
-                            f"{title}"
-                        )
-
                         continue
 
                     seen_links.add(
@@ -548,13 +381,6 @@ class DiMarzioProvider(Provider):
                         print(
                             f"Immagine: "
                             f"{image_url}"
-                        )
-
-                    if published:
-
-                        print(
-                            f"Pubblicata: "
-                            f"{published}"
                         )
 
                     items.append(
